@@ -68,7 +68,7 @@ async function submitFeedback(reportId) {
   try {
     statusSpan.textContent = "📤 Submitting feedback...";
     
-    const response = await fetch("http://127.0.0.1:5000/submit-feedback", {
+    const response = await fetch("/submit-feedback", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
@@ -222,7 +222,7 @@ document.getElementById("reportForm").addEventListener("submit", async (e) => {
       submitBtn.textContent = "📊 Analyzing with AI...";
 
       try {
-        const response = await fetch("http://127.0.0.1:5000/submit-report", {
+        const response = await fetch("/submit-report", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({category, description, location, image})
