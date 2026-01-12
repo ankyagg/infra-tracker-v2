@@ -8,6 +8,8 @@ venv/
 .venv
 .DS_Store
 .env
+backend/serviceAccountKey.json
+*.json
 *.log
 node_modules/
 .idea/

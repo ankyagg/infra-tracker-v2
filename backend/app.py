@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-app = Flask(__name__, static_folder="../frontend", static_url_path="")
+app = Flask(__name__, static_folder="../", static_url_path="")
 CORS(app)
 
 # IST timezone (UTC+5:30)
@@ -37,7 +37,7 @@ else:
 
 @app.route("/")
 def index():
-    return send_from_directory("../frontend", "index.html")
+    return send_from_directory("../", "index.html")
 
 @app.route("/list-models", methods=["GET"])
 def list_models():
@@ -298,4 +298,5 @@ def submit_feedback():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
