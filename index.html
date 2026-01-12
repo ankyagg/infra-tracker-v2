@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Smart Civic Reporting</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>Smart Civic Reporting System</h1>
+    <p>Report issues. Prevent accidents. Improve safety.</p>
+  </header>
+
+  <main>
+    <section class="form-card">
+      <h2>Report an Issue</h2>
+
+      <form id="reportForm">
+        <label>
+          Select Category
+          <select required>
+            <option value="">-- Choose --</option>
+            <option>Road Damage</option>
+            <option>Leaning Pole</option>
+            <option>Broken Footpath</option>
+            <option>Open Manhole</option>
+            <option>Cracked Pipeline
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Upload Image
+          <input type="file" accept="image/*" required />
+        </label>
+
+        <label>
+          Description
+          <textarea placeholder="Describe the issue briefly..." required></textarea>
+        </label>
+
+        <label>
+          Location
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="locationInput" placeholder="Auto or manual location" />
+            <button type="button" id="getLocationBtn" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Get Live Location</button>
+          </div>
+        </label>
+
+        <button type="submit">Submit Report</button>
+      </form>
+    </section>
+
+    <section class="info-card">
+      <h2>How It Works</h2>
+      <ol>
+        <li>Upload an image of the issue</li>
+        <li>AI analyzes damage severity</li>
+        <li>Authorities get risk‑based alerts</li>
+      </ol>
+    </section>
+
+    <section id="riskAssessmentSection" class="risk-card" style="display: none;">
+      <h2>🤖 Risk Assessment Results</h2>
+      <div id="riskAssessmentContainer"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built using Google Cloud Technologies</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
