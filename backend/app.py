@@ -21,10 +21,26 @@ CORS(app)
 # IST timezone (UTC+5:30)
 IST = timezone(timedelta(hours=5, minutes=30))
 
-cred = credentials.Certificate("backend/serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
+# Initialize Firebase from environment variable or file
+firebase_key_path = "backend/serviceAccountKey.json"
+firebase_key_env = os.getenv("FIREBASE_KEY")
 
-db = firestore.client()
+if firebase_key_env:
+    # Load from environment variable (Railway)
+    firebase_key_dict = json.loads(firebase_key_env)
+    cred = credentials.Certificate(firebase_key_dict)
+elif os.path.exists(firebase_key_path):
+    # Load from file (local development)
+    cred = credentials.Certificate(firebase_key_path)
+else:
+    print("WARNING: Firebase credentials not found. Set FIREBASE_KEY environment variable or add serviceAccountKey.json")
+    cred = None
+
+if cred:
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+else:
+    db = None
 
 # Initialize Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")

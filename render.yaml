@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: infra-tracker
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: GEMINI_API_KEY
+        fromQuery: 'GEMINI_API_KEY'
+      - key: FIREBASE_KEY
+        fromQuery: 'FIREBASE_KEY'
