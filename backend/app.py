@@ -23,17 +23,22 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 # Initialize Firebase from environment variable or file
 firebase_key_path = "backend/serviceAccountKey.json"
+firebase_key_render_path = "/etc/secrets/serviceAccountKey.json"  # Render secret file path
 firebase_key_env = os.getenv("FIREBASE_KEY")
 
-if firebase_key_env:
-    # Load from environment variable (Railway)
+if os.path.exists(firebase_key_render_path):
+    # Load from Render secret file
+    print("Loading Firebase from Render secret file")
+    cred = credentials.Certificate(firebase_key_render_path)
+elif firebase_key_env:
+    # Load from environment variable
     firebase_key_dict = json.loads(firebase_key_env)
     cred = credentials.Certificate(firebase_key_dict)
 elif os.path.exists(firebase_key_path):
     # Load from file (local development)
     cred = credentials.Certificate(firebase_key_path)
 else:
-    print("WARNING: Firebase credentials not found. Set FIREBASE_KEY environment variable or add serviceAccountKey.json")
+    print("WARNING: Firebase credentials not found.")
     cred = None
 
 if cred:
@@ -267,6 +272,12 @@ def submit_report():
             "timestamp": datetime.now(IST).isoformat()
         }
 
+        if not db:
+            return jsonify({
+                "status": "error",
+                "message": "Firebase not configured. Risk assessment: " + str(risk_assessment)
+            }), 500
+        
         result = db.collection("reports").add(report)
         report_id = result[1].id
         print(f"Report saved with ID: {report_id}")
@@ -302,8 +313,11 @@ def submit_feedback():
             "timestamp": datetime.now(IST).isoformat()
         }
         
-        db.collection("feedback").add(feedback)
-        print(f"Feedback stored for report {report_id}: {feedback_type}")
+        if db:
+            db.collection("feedback").add(feedback)
+            print(f"Feedback stored for report {report_id}: {feedback_type}")
+        else:
+            print(f"Firebase not configured. Feedback not stored for report {report_id}")
         
         return jsonify({
             "status": "success",
