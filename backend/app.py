@@ -150,44 +150,53 @@ def assess_risk_with_gemini(image_base64, category, description):
         image = Image.open(BytesIO(image_data))
         
         # Create assessment prompt with detailed criteria
-        prompt = """You are an expert infrastructure safety inspector. Analyze this damage image CAREFULLY and provide a detailed risk assessment.
+        prompt = """You are an expert infrastructure safety inspector with 20+ years experience. Analyze this damage image CAREFULLY and provide a DIFFERENTIATED risk assessment based on ACTUAL damage severity.
+
+CRITICAL: Do NOT default to 3/5. Be precise and differentiated in your scoring.
 
 ASSESSMENT SCALES:
 
 Risk Level (1 to 5 scale):
-1 = No damage or minimal cosmetic damage
-2 = Minor damage with no immediate safety threat
-3 = Moderate damage requiring attention within weeks
-4 = Significant damage requiring urgent repair within days
-5 = Critical damage requiring immediate closure
+1 = No visible damage or only cosmetic marks
+2 = Minor damage (small cracks, surface wear, minor deterioration)
+3 = Moderate damage (visible structural concerns, significant wear, needs attention soon)
+4 = Severe damage (clear structural issues, significant risk, urgent repair needed)
+5 = Critical damage (imminent danger, immediate closure and repair required)
 
 Safety Risk (1 to 5 scale):
-1 = No public safety risk
-2 = Low risk to pedestrians only
-3 = Moderate risk to vehicles and pedestrians
-4 = High risk with immediate injury potential
-5 = Critical risk of severe injury or death
+1 = No public safety risk whatsoever
+2 = Minimal risk - only to people directly touching the damaged area
+3 = Moderate risk - pedestrians or light traffic could be affected
+4 = High risk - vehicles or pedestrians in area at significant injury risk
+5 = Critical risk - immediate danger of severe injury or death
 
 Urgency:
-- immediate: Close area now, repair within hours
-- high: Repair within 24-48 hours
-- medium: Repair within 1-2 weeks
-- low: Schedule repair within 1 month
+- immediate: Close area NOW, repair within hours (life-threatening)
+- high: Repair within 24-48 hours (serious but not immediate danger)
+- medium: Repair within 1-2 weeks (noticeable issue, needs attention)
+- low: Schedule within 1 month (minor issue, monitor)
 
-RESPOND WITH ONLY THIS JSON STRUCTURE, NO OTHER TEXT:
+ANALYZE SPECIFIC DAMAGE INDICATORS:
+- Look at actual damage extent (none, small, moderate, widespread)
+- Assess structural integrity concerns
+- Evaluate pedestrian/vehicle exposure
+- Consider weather exposure and deterioration rate
+- Identify specific hazards
+
+RESPOND WITH ONLY THIS VALID JSON, NO OTHER TEXT:
 {
-  "risk_level": <number between 1 and 5>,
-  "safety_risk": <number between 1 and 5>,
-  "urgency": <one of: immediate, high, medium, low>,
-  "damage_type": <string describing damage type>,
-  "damage_extent": <string describing how widespread>,
-  "identified_risks": [<list of risk strings>],
-  "recommended_actions": [<list of action strings>]
+  "risk_level": <1-5, NOT defaulting to 3>,
+  "safety_risk": <1-5, NOT defaulting to 3>,
+  "urgency": <immediate|high|medium|low>,
+  "damage_type": "<specific type of damage observed>",
+  "damage_extent": "<how widespread: none|minimal|localized|moderate|extensive>",
+  "severity_justification": "<explain why you gave this specific risk level>",
+  "identified_risks": ["<specific risk 1>", "<specific risk 2>", "<specific risk 3>"],
+  "recommended_actions": ["<action 1>", "<action 2>", "<action 3>"]
 }"""
         
-        prompt += f"\n\nCategory: {category}\nUser Description: {description}\n\nProvide ONLY the JSON response, nothing else."
+        prompt += f"\n\nCategory: {category}\nUser Description: {description}\n\nBe SPECIFIC and DIFFERENTIATED. Do NOT give generic 3/5 scores. Analyze the actual damage."
 
-        # Call Gemini with image
         response = model.generate_content([prompt, image])
         response_text = response.text.strip()
         
@@ -201,37 +210,54 @@ RESPOND WITH ONLY THIS JSON STRUCTURE, NO OTHER TEXT:
             
             try:
                 assessment = json.loads(json_str)
-                # Ensure all required fields exist
-                assessment.setdefault("risk_level", 3)
-                assessment.setdefault("safety_risk", 3)
+                
+                # Validate and ensure proper scoring (don't default to 3)
+                if "risk_level" not in assessment or assessment["risk_level"] is None:
+                    assessment["risk_level"] = 2  # Default to lower if missing
+                if "safety_risk" not in assessment or assessment["safety_risk"] is None:
+                    assessment["safety_risk"] = 2
+                
+                # Ensure scores are in valid range
+                assessment["risk_level"] = max(1, min(5, int(assessment.get("risk_level", 2))))
+                assessment["safety_risk"] = max(1, min(5, int(assessment.get("safety_risk", 2))))
+                
                 assessment.setdefault("urgency", "medium")
                 assessment.setdefault("damage_type", "Unknown damage")
                 assessment.setdefault("damage_extent", "Unknown")
+                assessment.setdefault("severity_justification", "")
                 assessment.setdefault("identified_risks", [])
                 assessment.setdefault("recommended_actions", [])
+                
+                # Ensure identified_risks and recommended_actions are lists
+                if not isinstance(assessment["identified_risks"], list):
+                    assessment["identified_risks"] = []
+                if not isinstance(assessment["recommended_actions"], list):
+                    assessment["recommended_actions"] = []
                 
                 print(f"Parsed assessment: {assessment}")
             except json.JSONDecodeError as e:
                 print(f"JSON parse error: {str(e)}")
                 assessment = {
-                    "risk_level": 3,
-                    "safety_risk": 3,
+                    "risk_level": 2,
+                    "safety_risk": 2,
                     "urgency": "medium",
                     "damage_type": "Analysis failed",
                     "damage_extent": response_text[:200],
-                    "identified_risks": [],
-                    "recommended_actions": []
+                    "severity_justification": "Failed to parse response",
+                    "identified_risks": ["Unable to analyze image"],
+                    "recommended_actions": ["Please resubmit image"]
                 }
         else:
             print(f"No JSON found in response")
             assessment = {
-                "risk_level": 3,
-                "safety_risk": 3,
+                "risk_level": 2,
+                "safety_risk": 2,
                 "urgency": "medium",
                 "damage_type": "Analysis error",
                 "damage_extent": response_text[:200],
-                "identified_risks": [],
-                "recommended_actions": []
+                "severity_justification": "Could not extract JSON",
+                "identified_risks": ["Unable to analyze image"],
+                "recommended_actions": ["Please resubmit image"]
             }
         
         return assessment
@@ -239,9 +265,14 @@ RESPOND WITH ONLY THIS JSON STRUCTURE, NO OTHER TEXT:
     except Exception as e:
         print(f"Gemini error: {str(e)}")
         return {
-            "risk_level": 3,
-            "safety_risk": 3,
+            "risk_level": 2,
+            "safety_risk": 2,
             "urgency": "medium",
+            "damage_type": "Analysis error",
+            "damage_extent": "Error analyzing image",
+            "severity_justification": "System error during analysis",
+            "identified_risks": ["Unable to process image"],
+            "recommended_actions": ["Please resubmit the image for analysis"],
             "error": str(e)
         }
 
