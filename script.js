@@ -3,17 +3,19 @@ if (!document.getElementById("reportForm")) {
   console.log("On Landing Page - Script standby.");
 } else {
   
-  // 1. File Upload UI Interaction
+  // 1. File Upload UI Interaction (Camera Capture)
   document.getElementById("fileInput").addEventListener("change", function(e) {
-    const fileName = e.target.files[0]?.name;
+    const file = e.target.files[0];
     const visualText = document.getElementById("fileText");
     const visualIcon = document.querySelector("#fileVisual i");
     
-    if (fileName) {
-      visualText.textContent = "Selected: " + fileName;
+    if (file) {
+      // Show image preview info
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      visualText.textContent = `Photo captured (${fileSizeMB} MB)`;
       visualText.style.fontWeight = "bold";
       visualText.style.color = "#28a745";
-      visualIcon.classList.remove("fa-cloud-arrow-up");
+      visualIcon.classList.remove("fa-camera");
       visualIcon.classList.add("fa-check-circle");
       visualIcon.style.color = "#28a745";
     }
@@ -73,60 +75,124 @@ if (!document.getElementById("reportForm")) {
     });
   }
 
-  // 4. Render Results (UPDATED FOR MOBILE)
+  // 4. Render Results - Redesigned for better mobile experience
   function displayResult(data, image, id) {
     const riskLevel = data?.risk_level || 0;
+    const safetyRisk = data?.safety_risk || riskLevel;
     const urgency = data?.urgency || "Review Needed";
     const damageType = data?.damage_type || "Analysis pending";
     
     let actionsHTML = "";
     if (data?.recommended_actions && Array.isArray(data.recommended_actions)) {
-      actionsHTML = data.recommended_actions.map(a => `<li>${a}</li>`).join('');
+      actionsHTML = data.recommended_actions.map(a => `
+        <div class="action-item">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>${a}</span>
+        </div>
+      `).join('');
     } else {
-      actionsHTML = "<li>No specific actions recommended by AI.</li>";
+      actionsHTML = `<div class="action-item"><i class="fa-solid fa-circle-info"></i><span>No specific actions recommended.</span></div>`;
     }
 
     const colors = {
-      1: "#28a745", 2: "#8bc34a", 3: "#ffc107", 4: "#fd7e14", 5: "#dc3545"
+      1: "#22c55e", 2: "#84cc16", 3: "#eab308", 4: "#f97316", 5: "#ef4444"
     };
-    const theme = colors[riskLevel] || "#6c757d";
+    const bgColors = {
+      1: "#f0fdf4", 2: "#f7fee7", 3: "#fefce8", 4: "#fff7ed", 5: "#fef2f2"
+    };
+    const labels = {
+      1: "Very Low", 2: "Low", 3: "Moderate", 4: "High", 5: "Critical"
+    };
+    const theme = colors[riskLevel] || "#6b7280";
+    const bgTheme = bgColors[riskLevel] || "#f9fafb";
+    const riskLabel = labels[riskLevel] || "Unknown";
 
     return `
-      <style>
-        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
-        @media (max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
-      </style>
-      <section class="app-card" style="border-top: 6px solid ${theme}; animation: slideUp 0.6s ease;">
-        <div class="result-header">
-          <h2 style="margin:0; color:${theme}; display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
-            <i class="fa-solid fa-triangle-exclamation"></i> 
-            Risk: ${riskLevel}/5
-          </h2>
-          <span style="background:${theme}; color:white; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight: 700; white-space: nowrap;">
-            ${urgency}
-          </span>
+      <section class="result-card">
+        <!-- Success Header -->
+        <div class="result-success-banner">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>Report Submitted Successfully</span>
         </div>
-        
-        <div class="result-grid">
-          <div>
-            <img src="${image}" style="width:100%; border-radius:12px; border:2px solid #eee;">
-            <p style="font-size: 0.8rem; color: #999; margin-top: 10px; text-align: center;">Ref ID: ${id}</p>
+
+        <!-- Risk Score Section -->
+        <div class="risk-score-section" style="background: ${bgTheme}; border-color: ${theme};">
+          <div class="risk-score-circle" style="border-color: ${theme}; color: ${theme};">
+            <span class="risk-number">${riskLevel}</span>
+            <span class="risk-max">/5</span>
           </div>
-          <div>
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #e9ecef;">
-              <h4 style="margin-top:0; color: #0a192f; border-bottom: 2px solid #e1e4e8; padding-bottom: 12px;">
-                <i class="fa-solid fa-robot"></i> AI Assessment
-              </h4>
-              <p style="margin-bottom: 5px; font-size: 0.8rem; color: #666; text-transform: uppercase; font-weight: bold;">Detected Issue</p>
-              <p style="font-size: 1.1rem; margin-top: 0; font-weight: 500;">${damageType}</p>
-              <p style="margin-bottom: 5px; font-size: 0.8rem; color: #666; text-transform: uppercase; font-weight: bold;">Recommended Actions</p>
-              <ul style="padding-left:20px; color:#444; margin-top: 0; line-height: 1.6; font-size: 0.95rem;">${actionsHTML}</ul>
-              <button onclick="window.location.reload()" 
-                style="margin-top:20px; width: 100%; background: white; color: ${theme}; border: 2px solid ${theme}; padding: 12px; cursor: pointer; border-radius: 8px; font-weight: 700;">
-                <i class="fa-solid fa-rotate-right"></i> New Report
-              </button>
+          <div class="risk-info">
+            <span class="risk-label" style="color: ${theme};">${riskLabel} Risk</span>
+            <span class="urgency-badge" style="background: ${theme};">${urgency.toUpperCase()}</span>
+          </div>
+        </div>
+
+        <!-- Image Preview -->
+        <div class="result-image-container">
+          <img src="${image}" alt="Captured Evidence" class="result-image">
+          <div class="result-image-overlay">
+            <i class="fa-solid fa-image"></i> Evidence Captured
+          </div>
+        </div>
+
+        <!-- AI Analysis Card -->
+        <div class="ai-analysis-card">
+          <div class="ai-header">
+            <div class="ai-icon">
+              <i class="fa-solid fa-brain"></i>
+            </div>
+            <div>
+              <h3>AI Analysis</h3>
+              <p>Powered by Gemini</p>
             </div>
           </div>
+
+          <div class="analysis-item">
+            <div class="analysis-label">
+              <i class="fa-solid fa-magnifying-glass-chart"></i>
+              Detected Issue
+            </div>
+            <div class="analysis-value">${damageType}</div>
+          </div>
+
+          <div class="analysis-item">
+            <div class="analysis-label">
+              <i class="fa-solid fa-shield-halved"></i>
+              Safety Risk Level
+            </div>
+            <div class="safety-bar-container">
+              <div class="safety-bar" style="width: ${(safetyRisk/5)*100}%; background: ${theme};"></div>
+            </div>
+            <span class="safety-value" style="color: ${theme};">${safetyRisk}/5</span>
+          </div>
+
+          <div class="analysis-item">
+            <div class="analysis-label">
+              <i class="fa-solid fa-list-check"></i>
+              Recommended Actions
+            </div>
+            <div class="actions-list">
+              ${actionsHTML}
+            </div>
+          </div>
+        </div>
+
+        <!-- Report ID -->
+        <div class="report-id-section">
+          <span><i class="fa-solid fa-hashtag"></i> Report ID</span>
+          <code>${id}</code>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="result-actions">
+          <button onclick="window.location.reload()" class="btn-new-report">
+            <i class="fa-solid fa-plus"></i>
+            Submit New Report
+          </button>
+          <button onclick="window.location.href='index.html'" class="btn-home">
+            <i class="fa-solid fa-house"></i>
+            Home
+          </button>
         </div>
       </section>
     `;
@@ -160,6 +226,7 @@ if (!document.getElementById("reportForm")) {
           image: compressedImage
         };
 
+        // CORRECTED: Use relative path (automatically uses current domain/port)
         const response = await fetch("/submit-report", {
           method: "POST",
           headers: {"Content-Type": "application/json"},

@@ -6,7 +6,7 @@ import os
 import base64
 from datetime import datetime, timezone, timedelta
 import uuid
-import google.generativeai as genai
+from google import genai
 from PIL import Image
 from io import BytesIO
 import json
@@ -14,6 +14,8 @@ from appwrite.client import Client
 from appwrite.services.storage import Storage
 from appwrite.input_file import InputFile
 from dotenv import load_dotenv
+import hashlib
+import secrets
 
 load_dotenv()
 
@@ -25,7 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # Allow up to 20MB uploads
 # IST timezone (UTC+5:30)
 IST = timezone(timedelta(hours=5, minutes=30))
 
-# --- APPWRITE SETUP ---
+
 APPWRITE_ENDPOINT = os.getenv("APPWRITE_ENDPOINT")
 APPWRITE_PROJECT_ID = os.getenv("APPWRITE_PROJECT_ID")
 APPWRITE_API_KEY = os.getenv("APPWRITE_API_KEY")
@@ -48,7 +50,9 @@ else:
     print("WARNING: Appwrite credentials not fully set")
 
 # --- FIREBASE SETUP ---
-firebase_key_path = "serviceAccountKey.json"  # Looks for this file in the backend folder
+# Get the directory where app.py is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+firebase_key_path = os.path.join(script_dir, "serviceAccountKey.json")
 firebase_key_env = os.getenv("FIREBASE_KEY")
 
 if firebase_key_env:
@@ -64,9 +68,11 @@ if cred:
     try:
         firebase_admin.initialize_app(cred)
         db = firestore.client()
+        print("Firebase initialized successfully")
     except ValueError:
         # App already initialized
         db = firestore.client()
+        print("Firebase already initialized")
 else:
     db = None
 
@@ -86,6 +92,203 @@ else:
 @app.route("/")
 def index():
     return send_from_directory("../", "index.html")
+
+# Proxy endpoint for Appwrite images (to bypass CORS/auth issues)
+@app.route("/image/<file_id>")
+def get_image(file_id):
+    try:
+        if not appwrite_storage or not APPWRITE_BUCKET_ID:
+            return jsonify({"error": "Storage not configured"}), 500
+        
+        # Get file from Appwrite
+        result = appwrite_storage.get_file_view(
+            bucket_id=APPWRITE_BUCKET_ID,
+            file_id=file_id
+        )
+        
+        from flask import Response
+        return Response(result, mimetype='image/jpeg')
+    except Exception as e:
+        print(f"Image proxy error: {e}")
+        return jsonify({"error": str(e)}), 404
+
+# --- AUTHENTICATION HELPERS ---
+def hash_password(password):
+    """Hash password with SHA-256 and salt"""
+    salt = secrets.token_hex(16)
+    hashed = hashlib.sha256((password + salt).encode()).hexdigest()
+    return f"{salt}:{hashed}"
+
+def verify_password(password, stored_hash):
+    """Verify password against stored hash"""
+    try:
+        salt, hashed = stored_hash.split(':')
+        return hashlib.sha256((password + salt).encode()).hexdigest() == hashed
+    except:
+        return False
+
+def generate_token():
+    """Generate a secure session token"""
+    return secrets.token_urlsafe(32)
+
+def get_admin_whitelist():
+    """Load admin whitelist from JSON file"""
+    try:
+        whitelist_path = os.path.join(script_dir, "admin_whitelist.json")
+        with open(whitelist_path, 'r') as f:
+            data = json.load(f)
+            return [email.lower().strip() for email in data.get("admin_emails", [])]
+    except Exception as e:
+        print(f"Error loading admin whitelist: {e}")
+        return []
+
+def is_admin_email(email):
+    """Check if email is in admin whitelist"""
+    whitelist = get_admin_whitelist()
+    return email.lower().strip() in whitelist
+
+# Store active tokens (in production, use Redis or database)
+active_tokens = {}
+
+# --- AUTHENTICATION ROUTES ---
+@app.route("/auth/signup", methods=["POST"])
+def auth_signup():
+    try:
+        data = request.json
+        email = data.get("email", "").lower().strip()
+        password = data.get("password", "")
+        name = data.get("name", "").strip()
+        
+        if not email or not password or not name:
+            return jsonify({"status": "error", "message": "All fields are required"}), 400
+        
+        if len(password) < 6:
+            return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
+        
+        if not db:
+            return jsonify({"status": "error", "message": "Database not connected"}), 500
+        
+        # Check if email already exists in users collection
+        existing_user = db.collection("users").where("email", "==", email).limit(1).stream()
+        if any(existing_user):
+            return jsonify({"status": "error", "message": "Email already registered"}), 400
+        
+        # Determine role based on whitelist
+        role = "admin" if is_admin_email(email) else "user"
+        
+        # Create user in users collection (all users stored here)
+        user_data = {
+            "email": email,
+            "password": hash_password(password),
+            "name": name,
+            "role": role,
+            "created_at": datetime.now(IST).isoformat()
+        }
+        
+        db.collection("users").add(user_data)
+        
+        if role == "admin":
+            return jsonify({"status": "success", "message": "Admin account created successfully"})
+        else:
+            return jsonify({"status": "success", "message": "Account created successfully. Note: You have user access only."})
+        
+    except Exception as e:
+        print(f"Signup error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    try:
+        data = request.json
+        email = data.get("email", "").lower().strip()
+        password = data.get("password", "")
+        
+        if not email or not password:
+            return jsonify({"status": "error", "message": "Email and password required"}), 400
+        
+        if not db:
+            return jsonify({"status": "error", "message": "Database not connected"}), 500
+        
+        user_doc = None
+        user_data = None
+        
+        # Find user in users collection
+        users = db.collection("users").where("email", "==", email).limit(1).stream()
+        for doc in users:
+            user_doc = doc
+            user_data = doc.to_dict()
+            break
+        
+        if not user_data:
+            return jsonify({"status": "error", "message": "Invalid email or password"}), 401
+        
+        # Verify password
+        if not verify_password(password, user_data.get("password", "")):
+            return jsonify({"status": "error", "message": "Invalid email or password"}), 401
+        
+        # Get role from user data
+        role = user_data.get("role", "user")
+        
+        # Update last_logged_in timestamp
+        db.collection("users").document(user_doc.id).update({
+            "last_logged_in": datetime.now(IST).isoformat()
+        })
+        
+        # Generate session token
+        token = generate_token()
+        active_tokens[token] = {
+            "email": email,
+            "name": user_data.get("name", "User"),
+            "user_id": user_doc.id,
+            "role": role,
+            "created_at": datetime.now(IST).isoformat()
+        }
+        
+        return jsonify({
+            "status": "success",
+            "token": token,
+            "name": user_data.get("name", "User"),
+            "email": email,
+            "role": role
+        })
+        
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/auth/verify", methods=["POST"])
+def auth_verify():
+    """Verify if a token is valid"""
+    try:
+        data = request.json
+        token = data.get("token", "")
+        
+        if token in active_tokens:
+            return jsonify({
+                "status": "success",
+                "valid": True,
+                "user": active_tokens[token]
+            })
+        else:
+            return jsonify({"status": "error", "valid": False}), 401
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/auth/logout", methods=["POST"])
+def auth_logout():
+    """Logout and invalidate token"""
+    try:
+        data = request.json
+        token = data.get("token", "")
+        
+        if token in active_tokens:
+            del active_tokens[token]
+        
+        return jsonify({"status": "success", "message": "Logged out successfully"})
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # NEW: Route for Admin Dashboard to fetch reports
 @app.route("/get-reports", methods=["GET"])
@@ -137,9 +340,9 @@ def submit_report():
         location = data.get("location")
         image = data.get("image")  # base64 from frontend
         
-        # Assess risk with Gemini
+        # Assess risk with Gemini FIRST (before uploading, so we have base64)
         risk_assessment = None
-        if image and GEMINI_API_KEY:
+        if image and genai_client:
             print("Analyzing with Gemini...")
             risk_assessment = assess_risk_with_gemini(image, category, description)
         
@@ -156,7 +359,8 @@ def submit_report():
                     file_id=file_id,
                     file=InputFile.from_bytes(decoded_image, filename=f"{file_id}.jpg")
                 )
-                image_url = f"{APPWRITE_ENDPOINT}/storage/buckets/{APPWRITE_BUCKET_ID}/files/{file_id}/view?project={APPWRITE_PROJECT_ID}"
+                # Use our proxy endpoint instead of direct Appwrite URL
+                image_url = f"/image/{file_id}"
             except Exception as e:
                 print(f"Appwrite upload error: {e}")
 
@@ -198,7 +402,12 @@ def assess_risk_with_gemini(image_base64, category, description):
     try:
         if "," in image_base64: image_base64 = image_base64.split(",")[1]
         image_data = base64.b64decode(image_base64)
-        image = Image.open(BytesIO(image_data))
+        pil_image = Image.open(BytesIO(image_data))
+        
+        # Convert image to bytes for Gemini API
+        img_byte_arr = BytesIO()
+        pil_image.save(img_byte_arr, format='JPEG')
+        img_bytes = img_byte_arr.getvalue()
 
         prompt = f"""
         Analyze this infrastructure damage image.
@@ -211,21 +420,42 @@ def assess_risk_with_gemini(image_base64, category, description):
         - recommended_actions (list of strings)
         RETURN ONLY JSON.
         """
+        
+        print(f"Sending to Gemini - Model: {ACTIVE_GEMINI_MODEL}, Image size: {len(img_bytes)} bytes")
 
+        # Use the correct format for google-genai library - pass PIL Image directly
         response = genai_client.models.generate_content(
             model=ACTIVE_GEMINI_MODEL,
-            contents=[prompt, image]
+            contents=[prompt, pil_image]
         )
         
-        # Basic JSON extraction logic
+        print(f"Gemini raw response: {response.text}")
+        
         text = response.text
         if "{" in text and "}" in text:
             json_str = text[text.find("{"):text.rfind("}")+1]
-            return json.loads(json_str)
+            result = json.loads(json_str)
+            print(f"Parsed result: {result}")
+            return result
+        print("No JSON found in response")
         return default_fallback
         
     except Exception as e:
-        print(f"Gemini Error: {e}")
+        error_msg = str(e)
+        print(f"Gemini Error: {type(e).__name__}: {e}")
+        
+        # Check for quota exceeded error
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg or "quota" in error_msg.lower():
+            return {
+                "risk_level": 0, 
+                "urgency": "pending", 
+                "damage_type": "AI Quota Exceeded - Manual Review Required",
+                "recommended_actions": ["AI service quota exceeded. Please review manually or try again later."],
+                "error": "API quota exceeded"
+            }
+        
+        import traceback
+        traceback.print_exc()
         return default_fallback
 
 if __name__ == "__main__":

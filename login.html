@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | CivicGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --navy-dark: #020c1b;
+      --navy-primary: #0a192f;
+      --navy-light: #112240;
+      --accent-cyan: #64ffda;
+      --text-grey: #8892b0;
+      --white: #e6f1ff;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--navy-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: radial-gradient(#112240 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+    .login-card {
+      background: rgba(17, 34, 64, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      border: 1px solid rgba(100, 255, 218, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+    .login-header .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .login-header .logo i {
+      font-size: 2rem;
+      color: var(--accent-cyan);
+    }
+    .login-header .logo span {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--white);
+    }
+    .login-header h2 {
+      color: var(--white);
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .login-header p {
+      color: var(--text-grey);
+      font-size: 0.9rem;
+    }
+    .tabs {
+      display: flex;
+      background: rgba(2, 12, 27, 0.5);
+      border-radius: 12px;
+      padding: 5px;
+      margin-bottom: 30px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-grey);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+    .tab-btn.active {
+      background: var(--accent-cyan);
+      color: var(--navy-dark);
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      color: var(--text-grey);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-grey);
+      font-size: 1rem;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 14px 14px 14px 45px;
+      background: rgba(2, 12, 27, 0.6);
+      border: 2px solid rgba(100, 255, 218, 0.1);
+      border-radius: 10px;
+      color: var(--white);
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      background: rgba(2, 12, 27, 0.8);
+    }
+    .form-group input::placeholder {
+      color: var(--text-grey);
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, #4db6ac 100%);
+      border: none;
+      border-radius: 10px;
+      color: var(--navy-dark);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(100, 255, 218, 0.3);
+    }
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .error-msg {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .success-msg {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 25px;
+      color: var(--text-grey);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.3s;
+    }
+    .back-link:hover {
+      color: var(--accent-cyan);
+    }
+    .signup-fields {
+      display: none;
+    }
+    .signup-fields.show {
+      display: block;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 480px) {
+      .login-card {
+        padding: 30px 25px;
+      }
+      .login-header .logo span {
+        font-size: 1.3rem;
+      }
+      .login-header h2 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>CivicGuard</span>
+        </div>
+<h2>Welcome Back</h2>
+        <p>Sign in to continue to CivicGuard</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+        <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+      <div class="success-msg" id="successMsg"></div>
+
+      <form id="authForm">
+        <div class="signup-fields" id="signupFields">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="fullName" placeholder="Enter your name">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-envelope"></i>
+            <input type="email" id="email" placeholder="admin@example.com" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="password" placeholder="••••••••" required minlength="6">
+          </div>
+        </div>
+
+        <div class="signup-fields" id="confirmPasswordField">
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="confirmPassword" placeholder="••••••••">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span id="submitText">Sign In</span>
+        </button>
+      </form>
+
+      <a href="index.html" class="back-link">
+        <i class="fa-solid fa-arrow-left"></i> Back to Home
+      </a>
+    </div>
+  </div>
+
+  <script>
+    let currentTab = 'login';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelector(`.tab-btn:${tab === 'login' ? 'first-child' : 'last-child'}`).classList.add('active');
+      
+      const signupFields = document.querySelectorAll('.signup-fields');
+      const submitText = document.getElementById('submitText');
+      const submitIcon = document.querySelector('.submit-btn i');
+      
+      if (tab === 'signup') {
+        signupFields.forEach(el => el.classList.add('show'));
+        submitText.textContent = 'Create Account';
+        submitIcon.className = 'fa-solid fa-user-plus';
+      } else {
+        signupFields.forEach(el => el.classList.remove('show'));
+        submitText.textContent = 'Sign In';
+        submitIcon.className = 'fa-solid fa-right-to-bracket';
+      }
+      
+      hideMessages();
+    }
+
+    function showError(msg) {
+      const errorEl = document.getElementById('errorMsg');
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+      document.getElementById('successMsg').style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+      const successEl = document.getElementById('successMsg');
+      successEl.textContent = msg;
+      successEl.style.display = 'block';
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'none';
+    }
+
+    document.getElementById('authForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const btn = document.getElementById('submitBtn');
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      
+      hideMessages();
+
+      if (currentTab === 'signup') {
+        const fullName = document.getElementById('fullName').value.trim();
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        if (!fullName) {
+          showError('Please enter your full name');
+          return;
+        }
+        if (password !== confirmPassword) {
+          showError('Passwords do not match');
+          return;
+        }
+        if (password.length < 6) {
+          showError('Password must be at least 6 characters');
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating account...';
+
+        try {
+          const response = await fetch('/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, name: fullName })
+          });
+          
+          const data = await response.json();
+          
+          if (data.status === 'success') {
+            showSuccess('Account created successfully! Please login.');
+            switchTab('login');
+            document.getElementById('email').value = email;
+            document.getElementById('password').value = '';
+          } else {
+            showError(data.message || 'Failed to create account');
+          }
+        } catch (err) {
+          showError('Connection error. Please try again.');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> <span id="submitText">Create Account</span>';
+
+      } else {
+        // Login
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in...';
+
+        try {
+          const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          
+          const data = await response.json();
+          
+          if (data.status === 'success') {
+            // Store token and user info in localStorage
+            localStorage.setItem('userToken', data.token);
+            localStorage.setItem('userName', data.name);
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userRole', data.role);
+            
+            // Redirect based on role
+            if (data.role === 'admin') {
+              showSuccess('Welcome Admin! Redirecting to dashboard...');
+              setTimeout(() => {
+                window.location.href = 'admin.html';
+              }, 1000);
+            } else {
+              showSuccess('Login successful! Redirecting...');
+              setTimeout(() => {
+                window.location.href = 'app.html';
+              }, 1000);
+            }
+          } else {
+            showError(data.message || 'Invalid credentials');
+          }
+        } catch (err) {
+          showError('Connection error. Please try again.');
+        }
+        
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> <span id="submitText">Sign In</span>';
+      }
+    });
+
+    // Check if already logged in
+    const storedToken = localStorage.getItem('userToken');
+    const storedRole = localStorage.getItem('userRole');
+    if (storedToken) {
+      if (storedRole === 'admin') {
+        window.location.href = 'admin.html';
+      } else {
+        window.location.href = 'app.html';
+      }
+    }
+  </script>
+</body>
+</html>
