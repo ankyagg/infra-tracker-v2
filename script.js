@@ -73,7 +73,7 @@ if (!document.getElementById("reportForm")) {
     });
   }
 
-  // 4. Render Results
+  // 4. Render Results (UPDATED FOR MOBILE)
   function displayResult(data, image, id) {
     const riskLevel = data?.risk_level || 0;
     const urgency = data?.urgency || "Review Needed";
@@ -92,33 +92,38 @@ if (!document.getElementById("reportForm")) {
     const theme = colors[riskLevel] || "#6c757d";
 
     return `
+      <style>
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+        @media (max-width: 768px) { .result-grid { grid-template-columns: 1fr; } }
+      </style>
       <section class="app-card" style="border-top: 6px solid ${theme}; animation: slideUp 0.6s ease;">
         <div class="result-header">
-          <h2 style="margin:0; color:${theme}; display: flex; align-items: center; gap: 10px;">
+          <h2 style="margin:0; color:${theme}; display: flex; align-items: center; gap: 10px; font-size: 1.3rem;">
             <i class="fa-solid fa-triangle-exclamation"></i> 
-            Risk Level: ${riskLevel}/5
+            Risk: ${riskLevel}/5
           </h2>
-          <span style="background:${theme}; color:white; padding:6px 14px; border-radius:20px; font-size:0.85rem; font-weight: 700;">
-            ${urgency.toUpperCase()}
+          <span style="background:${theme}; color:white; padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight: 700; white-space: nowrap;">
+            ${urgency}
           </span>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top:20px;">
+        
+        <div class="result-grid">
           <div>
             <img src="${image}" style="width:100%; border-radius:12px; border:2px solid #eee;">
             <p style="font-size: 0.8rem; color: #999; margin-top: 10px; text-align: center;">Ref ID: ${id}</p>
           </div>
           <div>
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; border: 1px solid #e9ecef;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #e9ecef;">
               <h4 style="margin-top:0; color: #0a192f; border-bottom: 2px solid #e1e4e8; padding-bottom: 12px;">
                 <i class="fa-solid fa-robot"></i> AI Assessment
               </h4>
-              <p style="margin-bottom: 5px; font-size: 0.9rem; color: #666; text-transform: uppercase; font-weight: bold;">Detected Issue</p>
+              <p style="margin-bottom: 5px; font-size: 0.8rem; color: #666; text-transform: uppercase; font-weight: bold;">Detected Issue</p>
               <p style="font-size: 1.1rem; margin-top: 0; font-weight: 500;">${damageType}</p>
-              <p style="margin-bottom: 5px; font-size: 0.9rem; color: #666; text-transform: uppercase; font-weight: bold;">Recommended Actions</p>
-              <ul style="padding-left:20px; color:#444; margin-top: 0; line-height: 1.6;">${actionsHTML}</ul>
+              <p style="margin-bottom: 5px; font-size: 0.8rem; color: #666; text-transform: uppercase; font-weight: bold;">Recommended Actions</p>
+              <ul style="padding-left:20px; color:#444; margin-top: 0; line-height: 1.6; font-size: 0.95rem;">${actionsHTML}</ul>
               <button onclick="window.location.reload()" 
                 style="margin-top:20px; width: 100%; background: white; color: ${theme}; border: 2px solid ${theme}; padding: 12px; cursor: pointer; border-radius: 8px; font-weight: 700;">
-                <i class="fa-solid fa-rotate-right"></i> Submit New Report
+                <i class="fa-solid fa-rotate-right"></i> New Report
               </button>
             </div>
           </div>
@@ -155,7 +160,6 @@ if (!document.getElementById("reportForm")) {
           image: compressedImage
         };
 
-        // CORRECTED: Use relative path (automatically uses current domain/port)
         const response = await fetch("/submit-report", {
           method: "POST",
           headers: {"Content-Type": "application/json"},

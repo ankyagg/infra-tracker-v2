@@ -101,6 +101,25 @@
       background: var(--primary-dark); color: white; text-decoration: none;
       border-radius: 12px; font-weight: 600; margin-top: 10px; cursor: pointer;
     }
+
+    /* --- ADMIN MOBILE CSS --- */
+    @media (max-width: 900px) {
+      body { flex-direction: column; }
+      .sidebar {
+        width: 100%; height: auto; position: relative; flex-direction: row;
+        justify-content: space-between; align-items: center; padding: 15px 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      }
+      .sidebar .nav-links { display: none; }
+      .brand { margin-bottom: 0; font-size: 1.2rem; }
+      .main-content { margin-left: 0; padding: 20px; }
+      .top-bar { flex-direction: column; align-items: flex-start; gap: 20px; }
+      .filter-tabs { width: 100%; overflow-x: auto; }
+      .reports-grid { grid-template-columns: 1fr; }
+      .modal-container { flex-direction: column; width: 95%; height: 90vh; overflow-y: auto; }
+      .modal-left { width: 100%; height: 250px; }
+      .modal-right { width: 100%; height: auto; padding: 25px; }
+    }
   </style>
 </head>
 <body>
@@ -197,7 +216,6 @@
       reports.forEach(report => {
         const risk = report.risk_assessment?.risk_level || 0;
         const imageSrc = report.image ? report.image : ''; 
-        // Note: report.image is now an Appwrite URL from backend
         
         let riskColor = '#10b981'; 
         if(risk >= 4) riskColor = '#ef4444'; 
@@ -232,9 +250,8 @@
       document.getElementById('modalDesc').innerText = report.description || 'No description.';
       document.getElementById('modalRiskLevel').innerText = `${report.risk_assessment?.risk_level || 0}/5`;
 
-      // CORRECTED MAPS LINK
       if(report.location) {
-        document.getElementById('mapsLink').href = `https://www.google.com/maps/search/?api=1&query=${report.location}`;
+        document.getElementById('mapsLink').href = `http://maps.google.com/?q=${report.location}`;
         document.getElementById('mapsLink').style.display = 'inline-flex';
       } else {
         document.getElementById('mapsLink').style.display = 'none';

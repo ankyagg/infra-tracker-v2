@@ -57,3 +57,20 @@ footer { background: var(--navy-dark); color: var(--text-grey); text-align: cent
 footer a { color: var(--accent-cyan); text-decoration: none; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+  /* Navbar adjustments */
+  .navbar { padding: 15px 20px; flex-direction: column; gap: 15px; }
+  .nav-links { gap: 20px; font-size: 0.9rem; }
+  
+  /* Hero Section */
+  .hero-section { padding: 80px 20px 60px; }
+  .hero-title { font-size: 2.2rem; }
+  .hero-subtitle { font-size: 1rem; padding: 0 10px; }
+  
+  /* Grid & Cards */
+  .features-grid { grid-template-columns: 1fr; padding: 0 10px; }
+  .app-container { padding: 0 15px; margin: 20px auto; }
+  .app-card { padding: 25px 20px; }
+}
