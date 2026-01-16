@@ -1,76 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Smart Civic Reporting</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infra tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <header>
-    <h1>Smart Civic Reporting System</h1>
-    <p>Report issues. Prevent accidents. Improve safety.</p>
+  <nav class="navbar">
+    <a href="index.html" class="nav-logo">
+      <i class="fa-solid fa-shield-halved" style="color: var(--accent-cyan);"></i> Infra Tracker
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+    </div>
+  </nav>
+  <header class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Report Infrastructure Risks with <br><span class="text-gradient">AI Precision.</span></h1>
+      <p class="hero-subtitle">
+        Infra Tracker uses advanced computer vision to analyze road damage, 
+        fallen poles, and civic hazards instantly. Help us build safer cities.
+      </p>
+      <a href="app.html" class="cta-button-main">Start Reporting Now <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
   </header>
-
-  <main>
-    <section class="form-card">
-      <h2>Report an Issue</h2>
-
-      <form id="reportForm">
-        <label>
-          Select Category
-          <select required>
-            <option value="">-- Choose --</option>
-            <option>Road Damage</option>
-            <option>Leaning Pole</option>
-            <option>Broken Footpath</option>
-            <option>Open Manhole</option>
-            <option>Cracked Pipeline
-            </option>
-          </select>
-        </label>
-
-        <label>
-          Capture Image
-          <input type="file" accept="image/*" capture="environment" required />
-        </label>
-
-        <label>
-          Description
-          <textarea placeholder="Describe the issue briefly..." required></textarea>
-        </label>
-
-        <label>
-          Location
-          <div style="display: flex; gap: 10px;">
-            <input type="text" id="locationInput" placeholder="Click button for live location" readonly required />
-            <button type="button" id="getLocationBtn" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Get Live Location</button>
-          </div>
-        </label>
-
-        <button type="submit">Submit Report</button>
-      </form>
-    </section>
-
-    <section class="info-card">
-      <h2>How It Works</h2>
-      <ol>
-        <li>Capture an image of the issue using camera</li>
-        <li>AI analyzes damage severity</li>
-        <li>Authorities get risk‑based alerts</li>
-      </ol>
-    </section>
-
-    <section id="riskAssessmentSection" class="risk-card" style="display: none;">
-      <h2>🤖 Risk Assessment Results</h2>
-      <div id="riskAssessmentContainer"></div>
-    </section>
-  </main>
-
+  <section id="features" class="features-section">
+    <h2 class="section-title">Why Infra Tracker?</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <i class="fa-solid fa-brain feature-icon"></i>
+        <h3>AI Powered Analysis</h3>
+        <p>Our Gemini-powered engine detects damage severity and classifies risks automatically in seconds.</p>
+      </div>
+      <div class="feature-card">
+        <i class="fa-solid fa-location-dot feature-icon"></i>
+        <h3>Geo-Tagging</h3>
+        <p>Pinpoint exact locations with GPS integration to help authorities find the problem faster.</p>
+      </div>
+      <div class="feature-card">
+        <i class="fa-solid fa-bolt feature-icon"></i>
+        <h3>Real-Time Alerts</h3>
+        <p>High-risk reports are prioritized instantly to prevent accidents before they happen.</p>
+      </div>
+    </div>
+  </section>
   <footer>
-    <p>Built using Google Cloud Technologies</p>
+    <div style="margin-bottom: 20px;">
+      <i class="fa-solid fa-shield-halved" style="color: var(--accent-cyan); font-size: 2rem;"></i>
+    </div>
+    <p>&copy; 2026 Infra Tracker AI Systems.<br>Designed for Safer Cities.</p>
+    <div style="margin-top: 20px; font-size: 0.9rem;">
+      <a href="#">Privacy Policy</a> &nbsp;|&nbsp; <a href="#">Terms of Service</a> &nbsp;|&nbsp; <a href="#">GitHub Repo</a>
+    </div>
   </footer>
-
-  <script src="script.js"></script>
 </body>
 </html>

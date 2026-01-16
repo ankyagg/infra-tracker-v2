@@ -1,99 +1,286 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Dashboard - Reports</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Center | CivicGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <style>
+    :root {
+      --primary-dark: #0f172a;
+      --primary-light: #1e293b;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.5);
+      --bg-color: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h1 { text-align: center; margin-bottom: 30px; color: #333; }
-    .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
-    .report-card {
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    .report-card:hover { transform: translateY(-5px); }
-    .report-image { width: 100%; height: 250px; object-fit: cover; }
-    .report-info { padding: 15px; }
-    .category { 
-      display: inline-block;
-      background: #007bff;
+    .sidebar {
+      width: 260px;
+      background: var(--primary-dark);
       color: white;
-      padding: 5px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      margin-bottom: 10px;
+      padding: 25px;
+      display: flex; flex-direction: column;
+      position: fixed; height: 100vh; z-index: 100;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.1);
     }
-    .description { font-size: 14px; color: #666; margin: 10px 0; }
-    .location { font-size: 12px; color: #999; }
-    .timestamp { font-size: 11px; color: #bbb; margin-top: 10px; }
-    .loading { text-align: center; padding: 40px; }
-    .error { color: red; text-align: center; padding: 20px; }
+    .brand {
+      font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 12px;
+      margin-bottom: 50px; color: white; text-decoration: none;
+    }
+    .nav-links { list-style: none; flex: 1; }
+    .nav-link {
+      display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+      color: #94a3b8; text-decoration: none; border-radius: 12px; font-weight: 500;
+      transition: all 0.3s; margin-bottom: 8px;
+    }
+    .nav-link:hover, .nav-link.active {
+      background: var(--accent); color: white; box-shadow: 0 4px 15px var(--accent-glow); transform: translateX(5px);
+    }
+    .main-content { flex: 1; margin-left: 260px; padding: 40px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+    .page-title h1 { font-size: 2rem; font-weight: 700; color: var(--primary-dark); }
+    .filter-tabs {
+      background: white; padding: 6px; border-radius: 12px; display: flex; gap: 5px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .filter-btn {
+      border: none; background: transparent; padding: 10px 20px; border-radius: 8px;
+      font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+    }
+    .filter-btn.active { background: var(--primary-dark); color: white; box-shadow: 0 2px 10px rgba(15, 23, 42, 0.2); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px; margin-bottom: 40px; }
+    .stat-card {
+      background: white; padding: 25px; border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-5px); }
+    .stat-value { font-size: 2.2rem; font-weight: 800; color: var(--primary-dark); margin: 10px 0; }
+    .stat-label { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
+    .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 30px; }
+    .report-card {
+      background: white; border-radius: 20px; overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;
+      transition: all 0.3s ease; cursor: pointer;
+    }
+    .report-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+    .card-image-container { position: relative; height: 200px; overflow: hidden; }
+    .card-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+    .report-card:hover .card-img { transform: scale(1.1); }
+    .risk-tag { position: absolute; top: 15px; right: 15px; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: white; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    .card-body { padding: 25px; }
+    .category-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: var(--primary-dark); }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); z-index: 1000;
+      display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px);
+    }
+    .modal-container {
+      background: white; width: 90%; max-width: 1100px; height: 85vh;
+      border-radius: 24px; overflow: hidden; display: flex;
+    }
+    .modal-left { width: 55%; background: #000; display: flex; align-items: center; justify-content: center; }
+    .modal-img { width: 100%; height: 100%; object-fit: contain; }
+    .modal-right { width: 45%; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; background: white; }
+    .close-btn { background: #f1f5f9; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; }
+    .action-btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 14px 24px;
+      background: var(--primary-dark); color: white; text-decoration: none;
+      border-radius: 12px; font-weight: 600; margin-top: 10px; cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Admin Dashboard - All Reports</h1>
-    <div id="reports" class="reports-grid">
-      <div class="loading">Loading reports...</div>
+  <aside class="sidebar">
+    <a href="#" class="brand"><i class="fa-solid fa-layer-group"></i> CivicGuard</a>
+    <ul class="nav-links">
+      <li><a href="#" class="nav-link active"><i class="fa-solid fa-grid-2"></i> Dashboard</a></li>
+    </ul>
+    <div style="margin-top:auto; color:#94a3b8; font-size:0.8rem;">Logged as Admin</div>
+  </aside>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="page-title">
+        <h1>Dashboard Overview</h1>
+        <p style="color:var(--text-muted)">Real-time infrastructure monitoring.</p>
+      </div>
+      <div class="filter-tabs">
+        <button class="filter-btn active" onclick="filterReports('all', this)">All Reports</button>
+        <button class="filter-btn" onclick="filterReports('critical', this)">Critical 🔥</button>
+        <button class="filter-btn" onclick="filterReports('resolved', this)">Resolved ✅</button>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="totalCount">0</div>
+        <div class="stat-label">Total Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="criticalCount" style="color:var(--danger)">0</div>
+        <div class="stat-label">Critical Risks</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="resolvedCount" style="color:var(--success)">0</div>
+        <div class="stat-label">Resolved Cases</div>
+      </div>
+    </div>
+
+    <div id="loading"><i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color:var(--accent)"></i></div>
+    <div id="reportsGrid" class="reports-grid"></div>
+  </main>
+
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-container">
+      <div class="modal-left"><img id="modalImg" class="modal-img" src="" alt="Evidence"></div>
+      <div class="modal-right">
+        <div style="display:flex; justify-content:space-between;">
+          <h2 id="modalCategory" style="margin:0;">Category</h2>
+          <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <p id="modalId" style="color:#64748b; font-family:monospace; margin-bottom:20px;">ID: #123</p>
+        
+        <h3>Risk Level: <span id="modalRiskLevel">0/5</span></h3>
+        <p id="modalDesc" style="font-style:italic; color:#64748b; margin:20px 0;">-</p>
+        
+        <div style="margin-top:auto; display:flex; gap:10px;">
+          <a id="mapsLink" href="#" target="_blank" class="action-btn" style="background:white; color:#333; border:1px solid #ccc;">
+            <i class="fa-solid fa-location-dot"></i> Maps
+          </a>
+          <button id="resolveBtn" class="action-btn" style="flex:1; justify-content:center;">Resolve</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
-
   <script>
-    // Initialize Firebase - UPDATE WITH YOUR CONFIG
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "yolo-infra-tracker.firebaseapp.com",
-      projectId: "yolo-infra-tracker",
-      storageBucket: "yolo-infra-tracker.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    let allReports = [];
 
     async function loadReports() {
-      const reportsDiv = document.getElementById("reports");
       try {
-        const snapshot = await db.collection("reports").orderBy("timestamp", "desc").get();
-        
-        if (snapshot.empty) {
-          reportsDiv.innerHTML = "<div class='error'>No reports found</div>";
-          return;
+        const response = await fetch('/get-reports');
+        const data = await response.json();
+        if (data.status === 'success') {
+          allReports = data.reports;
+          renderReports(allReports);
+          updateStats(allReports);
         }
-
-        reportsDiv.innerHTML = "";
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const card = document.createElement("div");
-          card.className = "report-card";
-          
-          const timestamp = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : "N/A";
-          
-          card.innerHTML = `
-            ${data.image ? `<img src="${data.image}" class="report-image">` : "<div style='height:250px; background:#eee;'></div>"}
-            <div class="report-info">
-              <span class="category">${data.category || "Unknown"}</span>
-              <div class="description"><strong>Description:</strong> ${data.description || "N/A"}</div>
-              <div class="location"><strong>Location:</strong> ${data.location || "N/A"}</div>
-              <div class="timestamp">Submitted: ${timestamp}</div>
-            </div>
-          `;
-          
-          reportsDiv.appendChild(card);
-        });
-      } catch (error) {
-        console.error("Error loading reports:", error);
-        reportsDiv.innerHTML = `<div class='error'>Error: ${error.message}</div>`;
+      } catch (err) {
+        document.getElementById('loading').innerHTML = `<span style="color:red;">Failed to connect to server.</span>`;
       }
+    }
+
+    function renderReports(reports) {
+      const grid = document.getElementById('reportsGrid');
+      document.getElementById('loading').style.display = 'none';
+      grid.innerHTML = '';
+
+      if (reports.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:#94a3b8;"><h3>No reports found</h3></div>';
+        return;
+      }
+
+      reports.forEach(report => {
+        const risk = report.risk_assessment?.risk_level || 0;
+        const imageSrc = report.image ? report.image : ''; 
+        // Note: report.image is now an Appwrite URL from backend
+        
+        let riskColor = '#10b981'; 
+        if(risk >= 4) riskColor = '#ef4444'; 
+        else if(risk === 3) riskColor = '#f59e0b'; 
+
+        const card = document.createElement('div');
+        card.className = 'report-card';
+        card.onclick = () => openDetailModal(report);
+        
+        card.innerHTML = `
+          <div class="card-image-container">
+            <span class="risk-tag" style="background:${riskColor}">RISK ${risk}/5</span>
+            <img src="${imageSrc}" class="card-img" loading="lazy">
+          </div>
+          <div class="card-body">
+            <div class="category-title">${report.category || 'Incident'}</div>
+            <div style="color:#64748b; font-size:0.85rem;">
+              <i class="fa-regular fa-clock"></i> ${new Date(report.timestamp).toLocaleDateString()}
+              <span style="float:right; font-weight:bold; color:${report.status==='Resolved'?'#10b981':'#f59e0b'}">${report.status||'Reported'}</span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openDetailModal(report) {
+      const modal = document.getElementById('detailModal');
+      document.getElementById('modalImg').src = report.image || '';
+      document.getElementById('modalCategory').innerText = report.category || 'Issue';
+      document.getElementById('modalId').innerText = `ID: ${report.id}`;
+      document.getElementById('modalDesc').innerText = report.description || 'No description.';
+      document.getElementById('modalRiskLevel').innerText = `${report.risk_assessment?.risk_level || 0}/5`;
+
+      // CORRECTED MAPS LINK
+      if(report.location) {
+        document.getElementById('mapsLink').href = `https://www.google.com/maps/search/?api=1&query=${report.location}`;
+        document.getElementById('mapsLink').style.display = 'inline-flex';
+      } else {
+        document.getElementById('mapsLink').style.display = 'none';
+      }
+
+      const resolveBtn = document.getElementById('resolveBtn');
+      if (report.status === 'Resolved') {
+        resolveBtn.innerHTML = 'Re-open Case';
+        resolveBtn.style.background = '#f59e0b';
+        resolveBtn.onclick = () => updateStatus(report.id, 'In Progress');
+      } else {
+        resolveBtn.innerHTML = 'Mark Resolved';
+        resolveBtn.style.background = '#10b981';
+        resolveBtn.onclick = () => updateStatus(report.id, 'Resolved');
+      }
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+
+    async function updateStatus(id, newStatus) {
+      if(!confirm(`Change status to: ${newStatus}?`)) return;
+      try {
+        await fetch('/update-report-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report_id: id, status: newStatus })
+        });
+        closeModal();
+        loadReports();
+      } catch (err) { alert('Failed to update status.'); }
+    }
+
+    function updateStats(reports) {
+      document.getElementById('totalCount').innerText = reports.length;
+      document.getElementById('criticalCount').innerText = reports.filter(r => (r.risk_assessment?.risk_level || 0) >= 4).length;
+      document.getElementById('resolvedCount').innerText = reports.filter(r => r.status === 'Resolved').length;
+    }
+
+    function filterReports(type, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      let filtered = allReports;
+      if (type === 'critical') filtered = allReports.filter(r => (r.risk_assessment?.risk_level || 0) >= 4);
+      else if (type === 'resolved') filtered = allReports.filter(r => r.status === 'Resolved');
+      renderReports(filtered);
     }
 
     loadReports();

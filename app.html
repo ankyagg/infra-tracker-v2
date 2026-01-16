@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Issue | CivicGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="nav-logo" style="font-size: 1rem;">
+      <i class="fa-solid fa-chevron-left" style="color:var(--accent-cyan);"></i> &nbsp; Back to Home
+    </a>
+    <div style="font-weight: 600; color: white;">Dashboard</div>
+  </nav>
+
+  <main class="app-container">
+    <section class="app-card" id="formSection">
+      <h2 style="margin-top:0; color:var(--navy-primary);"><i class="fa-solid fa-camera"></i> New Incident Report</h2>
+      
+      <form id="reportForm">
+        <label>Issue Category</label>
+        <select required>
+          <option value="">-- Select Type --</option>
+          <option>Road Damage / Pothole</option>
+          <option>Broken Streetlight</option>
+          <option>Open Manhole</option>
+          <option>Water Leakage</option>
+          <option>Garbage Dump</option>
+        </select>
+
+        <label>Upload Evidence (Image)</label>
+        <div class="file-upload-wrapper">
+          <input type="file" id="fileInput" accept="image/*" required>
+          <div class="file-upload-visual" id="fileVisual">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; margin-bottom: 10px;"></i>
+            <span id="fileText">Click to Upload or Snap Photo</span>
+          </div>
+        </div>
+
+        <label>Description</label>
+        <textarea rows="3" placeholder="Describe the severity..."></textarea>
+
+        <label>Location</label>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="locationInput" placeholder="GPS Coordinates" readonly>
+          <button type="button" id="getLocationBtn" style="width:auto; padding:0 25px; background:var(--navy-light); border:none; color:white; border-radius: 8px; cursor:pointer;">
+            <i class="fa-solid fa-location-crosshairs"></i>
+          </button>
+        </div>
+
+        <button type="submit" class="analyze-btn">Analyze Risk</button>
+      </form>
+    </section>
+
+    <div id="riskResultContainer"></div>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

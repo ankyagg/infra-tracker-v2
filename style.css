@@ -1,64 +1,59 @@
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  background: #f4f6f8;
+:root {
+  --navy-dark: #020c1b;
+  --navy-primary: #0a192f;
+  --navy-light: #112240;
+  --accent-cyan: #64ffda;
+  --accent-cyan-dark: #4db6ac;
+  --text-grey: #8892b0;
+  --white: #e6f1ff;
+  --font-heading: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --glass-bg: rgba(10, 25, 47, 0.85);
+  --shadow-glow: 0 4px 20px rgba(100, 255, 218, 0.25);
 }
-
-header {
-  background: #1a73e8;
-  color: white;
-  padding: 20px;
-  text-align: center;
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-body); margin: 0; background-color: #f4f7f6; color: #333; line-height: 1.6; }
+.navbar {
+  display: flex; justify-content: space-between; align-items: center; padding: 20px 50px;
+  background: var(--glass-bg); backdrop-filter: blur(12px); color: white;
+  position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(100, 255, 218, 0.1);
 }
-
-main {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 30px;
-  flex-wrap: wrap;
+.nav-logo { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: white; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.nav-links { display: flex; gap: 30px; align-items: center; }
+.nav-links a { color: var(--text-grey); text-decoration: none; font-weight: 500; transition: color 0.3s; font-size: 0.95rem; }
+.nav-links a:hover { color: var(--accent-cyan); }
+.hero-section {
+  background: var(--navy-primary); color: var(--white); padding: 120px 50px 100px 50px; text-align: center;
+  background-image: radial-gradient(#112240 1px, transparent 1px); background-size: 40px 40px;
 }
-
-.form-card, .info-card, .risk-card {
-  background: white;
-  padding: 20px;
-  width: 350px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+.hero-content { max-width: 800px; margin: 0 auto; animation: fadeInUp 1s ease-out; }
+.hero-title { font-family: var(--font-heading); font-size: 3.5rem; margin-bottom: 20px; line-height: 1.2; }
+.text-gradient { background: linear-gradient(90deg, #64ffda, #29b6f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+.hero-subtitle { color: var(--text-grey); font-size: 1.2rem; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto; }
+.cta-button-main {
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-cyan-dark) 100%);
+  color: var(--navy-dark); padding: 18px 40px; font-size: 1.1rem; font-weight: 700; border-radius: 5px; text-decoration: none;
+  display: inline-block; transition: transform 0.2s, box-shadow 0.2s; box-shadow: var(--shadow-glow);
 }
-
-.risk-card {
-  width: 100%;
-  max-width: 1000px;
-}
-
-label {
-  display: block;
-  margin-bottom: 15px;
-}
-
-input, textarea, select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-}
-
-button {
-  background: #1a73e8;
-  color: white;
-  border: none;
-  padding: 10px;
-  width: 100%;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #1558b0;
-}
-
-footer {
-  text-align: center;
-  padding: 15px;
-  background: #eaeaea;
-}
+.cta-button-main:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(100, 255, 218, 0.4); }
+.features-section { padding: 100px 50px; background: white; text-align: center; }
+.section-title { color: var(--navy-primary); font-family: var(--font-heading); font-size: 2rem; margin-bottom: 60px; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; max-width: 1200px; margin: 0 auto; }
+.feature-card { padding: 30px; border-radius: 12px; background: #fff; border: 1px solid #eee; box-shadow: 0 10px 30px rgba(0,0,0,0.05); transition: transform 0.3s, box-shadow 0.3s; }
+.feature-card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-color: var(--accent-cyan); }
+.feature-icon { font-size: 2.5rem; color: var(--navy-light); margin-bottom: 20px; }
+.app-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr; gap: 30px; }
+.app-card { background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); padding: 40px; animation: slideUp 0.6s ease-out; }
+label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--navy-light); }
+input, select, textarea { width: 100%; padding: 12px; border: 2px solid #e1e4e8; border-radius: 8px; margin-bottom: 20px; font-family: inherit; box-sizing: border-box; background: #f8f9fa; transition: all 0.3s; }
+input:focus, select:focus, textarea:focus { outline: none; background: #fff; border-color: var(--accent-cyan); box-shadow: 0 0 0 4px rgba(100, 255, 218, 0.15); }
+.file-upload-wrapper { position: relative; height: 120px; margin-bottom: 20px; }
+.file-upload-wrapper input { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; margin: 0; }
+.file-upload-visual { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 2px dashed #cbd5e0; border-radius: 8px; background: #f8f9fa; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-grey); transition: all 0.3s; box-sizing: border-box; }
+.file-upload-wrapper input:hover + .file-upload-visual { border-color: var(--accent-cyan); background: rgba(100, 255, 218, 0.05); color: var(--navy-primary); }
+.analyze-btn { width: 100%; background: linear-gradient(135deg, var(--navy-light) 0%, var(--navy-primary) 100%); color: white; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+.analyze-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(10, 25, 47, 0.3); }
+footer { background: var(--navy-dark); color: var(--text-grey); text-align: center; padding: 60px 20px; margin-top: auto; border-top: 1px solid rgba(100, 255, 218, 0.1); }
+footer a { color: var(--accent-cyan); text-decoration: none; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
