@@ -6,20 +6,44 @@ import os
 import base64
 from datetime import datetime, timezone, timedelta
 import uuid
-import google.generativeai as genai
+from google import genai
 from PIL import Image
 from io import BytesIO
 import json
+from appwrite.client import Client
+from appwrite.services.storage import Storage
+from appwrite.input_file import InputFile
 from dotenv import load_dotenv
-
-# Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__, static_folder="../", static_url_path="")
 CORS(app)
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # Allow up to 20MB uploads
 
 # IST timezone (UTC+5:30)
 IST = timezone(timedelta(hours=5, minutes=30))
+
+# Initialize Appwrite
+APPWRITE_ENDPOINT = os.getenv("APPWRITE_ENDPOINT")
+APPWRITE_PROJECT_ID = os.getenv("APPWRITE_PROJECT_ID")
+APPWRITE_API_KEY = os.getenv("APPWRITE_API_KEY")
+APPWRITE_BUCKET_ID = os.getenv("APPWRITE_BUCKET_ID")
+
+appwrite_client = None
+appwrite_storage = None
+
+if all([APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, APPWRITE_API_KEY]):
+    try:
+        appwrite_client = Client()
+        appwrite_client.set_endpoint(APPWRITE_ENDPOINT)
+        appwrite_client.set_project(APPWRITE_PROJECT_ID)
+        appwrite_client.set_key(APPWRITE_API_KEY)
+        appwrite_storage = Storage(appwrite_client)
+        print("Appwrite initialized successfully")
+    except Exception as e:
+        print(f"Error initializing Appwrite: {e}")
+else:
+    print("WARNING: Appwrite credentials not fully set in environment variables")
 
 # Initialize Firebase from environment variable or file
 firebase_key_path = "backend/serviceAccountKey.json"
@@ -49,16 +73,25 @@ else:
 
 # Initialize Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+ACTIVE_GEMINI_MODEL = "gemini-1.5-flash"
+
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-2.5-flash")  # Free tier model
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    print(f"Gemini initialized with model: {ACTIVE_GEMINI_MODEL}")
 else:
-    model = None
-    print("WARNING: GEMINI_API_KEY environment variable not set")
+    gemini_client = None
 
 @app.route("/")
 def index():
     return send_from_directory("../", "index.html")
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({
+        "status": "error",
+        "message": "Image file too large! Please use a smaller image or capture at lower resolution."
+    }), 413
 
 @app.route("/list-models", methods=["GET"])
 def list_models():
@@ -70,10 +103,8 @@ def list_models():
                 "message": "API key not configured"
             }), 500
         
-        models = genai.list_models()
         available_models = []
-        
-        for model in models:
+        for model in gemini_client.models.list():
             available_models.append({
                 "name": model.name,
                 "display_name": model.display_name,
@@ -96,7 +127,7 @@ def list_models():
 def test_gemini():
     """Test if Gemini API is working"""
     try:
-        if not model:
+        if not gemini_client:
             return jsonify({
                 "status": "error",
                 "message": "Gemini API key not configured",
@@ -104,7 +135,10 @@ def test_gemini():
             }), 500
         
         # Test simple text generation
-        test_response = model.generate_content("Say 'Gemini is working' in exactly those words.")
+        test_response = gemini_client.models.generate_content(
+            model=ACTIVE_GEMINI_MODEL, 
+            contents="Say 'Gemini is working' in exactly those words."
+        )
         
         if test_response and test_response.text:
             return jsonify({
@@ -132,13 +166,19 @@ def assess_risk_with_gemini(image_base64, category, description):
     """
     Use Gemini to assess infrastructure damage risk from image
     """
-    if not model:
-        return {
-            "risk_level": 3,
-            "safety_risk": 3,
-            "urgency": "medium",
-            "assessment": "Gemini API not configured"
-        }
+    default_fallback = {
+        "risk_level": "Pending",
+        "safety_risk": "Pending",
+        "urgency": "Review Required",
+        "damage_type": "Awaiting AI/Manual Analysis",
+        "damage_extent": "To be determined",
+        "severity_justification": "AI analysis currently unavailable due to system limits. A manual review has been scheduled.",
+        "identified_risks": ["Area needs physical inspection"],
+        "recommended_actions": ["Maintain safe distance", "Wait for authority confirmation"]
+    }
+
+    if not gemini_client:
+        return default_fallback
     
     try:
         # Remove data URI prefix if present
@@ -197,7 +237,10 @@ RESPOND WITH ONLY THIS VALID JSON, NO OTHER TEXT:
         
         prompt += f"\n\nCategory: {category}\nUser Description: {description}\n\nBe SPECIFIC and DIFFERENTIATED. Do NOT give generic 3/5 scores. Analyze the actual damage."
 
-        response = model.generate_content([prompt, image])
+        response = gemini_client.models.generate_content(
+            model=ACTIVE_GEMINI_MODEL,
+            contents=[prompt, image]
+        )
         response_text = response.text.strip()
         
         print(f"Raw Gemini response: {response_text[:500]}")
@@ -235,46 +278,17 @@ RESPOND WITH ONLY THIS VALID JSON, NO OTHER TEXT:
                     assessment["recommended_actions"] = []
                 
                 print(f"Parsed assessment: {assessment}")
+                return assessment
             except json.JSONDecodeError as e:
                 print(f"JSON parse error: {str(e)}")
-                assessment = {
-                    "risk_level": 2,
-                    "safety_risk": 2,
-                    "urgency": "medium",
-                    "damage_type": "Analysis failed",
-                    "damage_extent": response_text[:200],
-                    "severity_justification": "Failed to parse response",
-                    "identified_risks": ["Unable to analyze image"],
-                    "recommended_actions": ["Please resubmit image"]
-                }
+                return default_fallback
         else:
             print(f"No JSON found in response")
-            assessment = {
-                "risk_level": 2,
-                "safety_risk": 2,
-                "urgency": "medium",
-                "damage_type": "Analysis error",
-                "damage_extent": response_text[:200],
-                "severity_justification": "Could not extract JSON",
-                "identified_risks": ["Unable to analyze image"],
-                "recommended_actions": ["Please resubmit image"]
-            }
-        
-        return assessment
+            return default_fallback
         
     except Exception as e:
         print(f"Gemini error: {str(e)}")
-        return {
-            "risk_level": 2,
-            "safety_risk": 2,
-            "urgency": "medium",
-            "damage_type": "Analysis error",
-            "damage_extent": "Error analyzing image",
-            "severity_justification": "System error during analysis",
-            "identified_risks": ["Unable to process image"],
-            "recommended_actions": ["Please resubmit the image for analysis"],
-            "error": str(e)
-        }
+        return default_fallback
 
 @app.route("/submit-report", methods=["POST"])
 def submit_report():
@@ -285,21 +299,49 @@ def submit_report():
         category = data.get("category")
         description = data.get("description")
         location = data.get("location")
-        image = data.get("image")
+        image = data.get("image")  # base64 from frontend
         
         # Assess risk with Gemini if image provided
         risk_assessment = None
-        if image and model:
+        if image and gemini_client:
             print("Analyzing with Gemini...")
             risk_assessment = assess_risk_with_gemini(image, category, description)
             print(f"Risk assessment: {risk_assessment}")
         
+        # Upload to Appwrite Storage and get URL
+        image_url = None
+        if image and appwrite_storage and APPWRITE_BUCKET_ID:
+            try:
+                print("Uploading image to Appwrite Storage...")
+                # Remove data URI prefix if present
+                img_data = image
+                if "," in img_data:
+                    img_data = img_data.split(",")[1]
+                
+                # Decode base64 to bytes
+                decoded_image = base64.b64decode(img_data)
+                
+                # Upload to Appwrite
+                file_id = str(uuid.uuid4())
+                appwrite_storage.create_file(
+                    bucket_id=APPWRITE_BUCKET_ID,
+                    file_id=file_id,
+                    file=InputFile.from_bytes(decoded_image, filename=f"{file_id}.jpg")
+                )
+                
+                # Generate view URL
+                image_url = f"{APPWRITE_ENDPOINT}/storage/buckets/{APPWRITE_BUCKET_ID}/files/{file_id}/view?project={APPWRITE_PROJECT_ID}"
+                print(f"Image stored in Appwrite: {image_url}")
+            except Exception as e:
+                print(f"Appwrite upload error: {e}")
+                image_url = "Error: Upload failed"
+
         report = {
             "category": category,
             "description": description,
             "location": location,
-            "image": image,  # Store base64 image directly
-            "risk_assessment": risk_assessment,  # Store AI analysis
+            "image": image_url,  # Store ONLY the Appwrite URL in Firestore
+            "risk_assessment": risk_assessment,
             "timestamp": datetime.now(IST).isoformat()
         }
 
