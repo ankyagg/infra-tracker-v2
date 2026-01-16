@@ -148,6 +148,148 @@
       justify-content: center;
       z-index: 9999;
     }
+    
+    /* Mobile Menu Toggle */
+    .mobile-header {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--primary-dark);
+      z-index: 101;
+      padding: 0 15px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .mobile-header .brand {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    .menu-toggle {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    /* Mobile Responsive */
+    @media screen and (max-width: 768px) {
+      .mobile-header {
+        display: flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        width: 280px;
+        padding-top: 80px;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 99;
+        display: none;
+      }
+      .sidebar-overlay.show {
+        display: block;
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 80px 15px 30px 15px;
+      }
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      .page-title h1 {
+        font-size: 1.5rem;
+      }
+      .filter-tabs {
+        width: 100%;
+        overflow-x: auto;
+      }
+      .filter-btn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      .stat-card {
+        padding: 20px;
+      }
+      .stat-value {
+        font-size: 1.8rem;
+      }
+      .reports-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .card-image-container {
+        height: 180px;
+      }
+      .card-body {
+        padding: 15px;
+      }
+      /* Modal mobile */
+      .modal-container {
+        flex-direction: column;
+        height: 95vh;
+        width: 95%;
+        max-width: none;
+      }
+      .modal-left {
+        width: 100%;
+        height: 200px;
+      }
+      .modal-right {
+        width: 100%;
+        padding: 20px;
+        flex: 1;
+      }
+      .modal-right > div:first-child h2 {
+        font-size: 1.2rem;
+      }
+      .modal-right > div:nth-child(4) {
+        flex-wrap: wrap;
+      }
+      .modal-right > div:nth-child(4) > div {
+        flex: 1 1 45% !important;
+        min-width: 80px;
+      }
+    }
+    
+    @media screen and (max-width: 480px) {
+      .main-content {
+        padding: 70px 10px 20px 10px;
+      }
+      .page-title h1 {
+        font-size: 1.3rem;
+      }
+      .stat-value {
+        font-size: 1.5rem;
+      }
+      .modal-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+      }
+      .modal-left {
+        height: 150px;
+      }
+      .modal-right {
+        padding: 15px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -159,7 +301,18 @@
     </div>
   </div>
 
-  <aside class="sidebar">
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <a href="index.html" class="brand"><i class="fa-solid fa-shield-halved" style="color:#64ffda;"></i> CivicGuard</a>
+    <button class="menu-toggle" onclick="toggleSidebar()">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+  
+  <!-- Sidebar Overlay -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
     <a href="index.html" class="brand"><i class="fa-solid fa-shield-halved" style="color:#64ffda;"></i> CivicGuard</a>
     <ul class="nav-links">
       <li><a href="#" class="nav-link active"><i class="fa-solid fa-grid-2"></i> Dashboard</a></li>
@@ -264,6 +417,14 @@
 
   <script>
     let allReports = [];
+
+    // --- MOBILE SIDEBAR TOGGLE ---
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('show');
+    }
 
     // --- AUTHENTICATION CHECK ---
     async function checkAuth() {

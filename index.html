@@ -15,9 +15,12 @@
       <i class="fa-solid fa-shield-halved" style="color: var(--accent-cyan);"></i> CivicGuard
     </a>
     <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="login.html" style="background: rgba(100, 255, 218, 0.1); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--accent-cyan);">
-        <i class="fa-solid fa-user-shield"></i> Admin
+      <a href="#features" class="hide-mobile">Features</a>
+      <a href="login.html" id="loginBtn" style="background: rgba(100, 255, 218, 0.1); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--accent-cyan);">
+        <i class="fa-solid fa-right-to-bracket"></i> <span class="btn-text">Login</span>
+      </a>
+      <a href="#" id="logoutBtn" onclick="logout()" style="display: none; background: rgba(239, 68, 68, 0.2); padding: 8px 16px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5;">
+        <i class="fa-solid fa-right-from-bracket"></i> <span class="btn-text">Logout</span>
       </a>
     </div>
   </nav>
@@ -60,5 +63,42 @@
       <a href="#">Privacy Policy</a> &nbsp;|&nbsp; <a href="#">Terms of Service</a> &nbsp;|&nbsp; <a href="#">GitHub Repo</a>
     </div>
   </footer>
+  
+  <script>
+    // Check login state
+    function checkLogin() {
+      const token = localStorage.getItem('userToken');
+      const loginBtn = document.getElementById('loginBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      
+      if (token) {
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-flex';
+      } else {
+        loginBtn.style.display = 'inline-flex';
+        logoutBtn.style.display = 'none';
+      }
+    }
+    
+    async function logout() {
+      const token = localStorage.getItem('userToken');
+      try {
+        await fetch('/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+      } catch (err) {}
+      
+      localStorage.removeItem('userToken');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userRole');
+      
+      window.location.reload();
+    }
+    
+    checkLogin();
+  </script>
 </body>
 </html>
