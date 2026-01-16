@@ -233,20 +233,12 @@ This project demonstrates:
 8. Results displayed to user in real-time
 9. User can provide feedback for model improvement
 
-## 🚧 Future Enhancements
-
-- [ ] Multiple image upload support
-- [ ] Heat map visualization of damage hotspots
-- [ ] Mobile app for iOS/Android
-- [ ] Real-time notifications to authorities
-- [ ] Historical damage tracking and trends
-- [ ] Integration with city infrastructure databases
-- [ ] ML model fine-tuning based on feedback
-- [ ] Damage severity prediction timeline
 
 ## 👥 Contributors
 
 - Aniket Walanj
+- Kuhu Vilecha 
+- Dishita Vaswani
 
 ## 📝 License
 
