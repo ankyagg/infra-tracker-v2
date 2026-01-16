@@ -73,10 +73,9 @@ else:
 
 # Initialize Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-ACTIVE_GEMINI_MODEL = "gemini-1.5-flash"
+ACTIVE_GEMINI_MODEL = "models/gemini-pro-vision"
 
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
     print(f"Gemini initialized with model: {ACTIVE_GEMINI_MODEL}")
 else:
