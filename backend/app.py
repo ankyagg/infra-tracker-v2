@@ -53,22 +53,43 @@ else:
 # Get the directory where app.py is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
 firebase_key_path = os.path.join(script_dir, "serviceAccountKey.json")
-firebase_key_render = "/etc/secrets/serviceAccountKey.json"  # Render secret file path
 firebase_key_env = os.getenv("FIREBASE_KEY")
+
+# Possible paths for Render secret file
+render_paths = [
+    "/etc/secrets/serviceAccountKey.json",
+    "/etc/secrets/firebase.json",
+    "serviceAccountKey.json",
+    "./serviceAccountKey.json"
+]
 
 cred = None
 if firebase_key_env:
-    firebase_key_dict = json.loads(firebase_key_env)
-    cred = credentials.Certificate(firebase_key_dict)
-    print("Firebase credentials loaded from environment variable")
-elif os.path.exists(firebase_key_render):
-    cred = credentials.Certificate(firebase_key_render)
-    print("Firebase credentials loaded from Render secret file")
-elif os.path.exists(firebase_key_path):
+    try:
+        firebase_key_dict = json.loads(firebase_key_env)
+        cred = credentials.Certificate(firebase_key_dict)
+        print("Firebase credentials loaded from environment variable")
+    except Exception as e:
+        print(f"Error loading FIREBASE_KEY from env: {e}")
+
+if not cred:
+    # Check all possible render paths
+    for rpath in render_paths:
+        if os.path.exists(rpath):
+            try:
+                cred = credentials.Certificate(rpath)
+                print(f"Firebase credentials loaded from: {rpath}")
+                break
+            except Exception as e:
+                print(f"Error loading from {rpath}: {e}")
+
+if not cred and os.path.exists(firebase_key_path):
     cred = credentials.Certificate(firebase_key_path)
-    print("Firebase credentials loaded from local file")
-else:
+    print(f"Firebase credentials loaded from local file: {firebase_key_path}")
+
+if not cred:
     print("WARNING: Firebase credentials not found.")
+    print(f"Checked paths: {render_paths + [firebase_key_path]}")
 
 if cred:
     try:
