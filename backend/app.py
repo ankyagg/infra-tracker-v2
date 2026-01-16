@@ -6,7 +6,7 @@ import os
 import base64
 from datetime import datetime, timezone, timedelta
 import uuid
-from google import genai
+import google.generativeai as genai
 from PIL import Image
 from io import BytesIO
 import json
@@ -71,15 +71,16 @@ if cred:
 else:
     db = None
 
-# Initialize Gemini API
+# Initialize Gemini API (vision-capable). Allow override via env GEMINI_MODEL.
+# Default to a lighter model to reduce quota usage.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-ACTIVE_GEMINI_MODEL = "models/gemini-pro-vision"
+ACTIVE_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "models/gemini-2.5-flash-lite")
 
 if GEMINI_API_KEY:
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
     print(f"Gemini initialized with model: {ACTIVE_GEMINI_MODEL}")
 else:
-    gemini_client = None
+    print("WARNING: GEMINI_API_KEY not configured")
 
 @app.route("/")
 def index():
@@ -103,16 +104,23 @@ def list_models():
             }), 500
         
         available_models = []
-        for model in gemini_client.models.list():
+        for model in genai.list_models():
             available_models.append({
                 "name": model.name,
-                "display_name": model.display_name,
-                "supported_generation_methods": model.supported_generation_methods
+                "display_name": getattr(model, "display_name", model.name),
+                "supported_generation_methods": getattr(model, "supported_generation_methods", []),
             })
+
+        # Helpful subsets for the UI / quick selection
+        text_vision_models = [
+            m for m in available_models
+            if "generateContent" in m.get("supported_generation_methods", [])
+        ]
         
         return jsonify({
             "status": "success",
             "available_models": available_models,
+            "text_vision_models": text_vision_models,
             "total_models": len(available_models)
         })
         
@@ -126,7 +134,7 @@ def list_models():
 def test_gemini():
     """Test if Gemini API is working"""
     try:
-        if not gemini_client:
+        if not GEMINI_API_KEY:
             return jsonify({
                 "status": "error",
                 "message": "Gemini API key not configured",
@@ -134,10 +142,8 @@ def test_gemini():
             }), 500
         
         # Test simple text generation
-        test_response = gemini_client.models.generate_content(
-            model=ACTIVE_GEMINI_MODEL, 
-            contents="Say 'Gemini is working' in exactly those words."
-        )
+        model = genai.GenerativeModel(ACTIVE_GEMINI_MODEL)
+        test_response = model.generate_content("Say 'Gemini is working' in exactly those words.")
         
         if test_response and test_response.text:
             return jsonify({
@@ -165,6 +171,58 @@ def assess_risk_with_gemini(image_base64, category, description):
     """
     Use Gemini to assess infrastructure damage risk from image
     """
+    def build_recommended_actions(risk_level: int, urgency: str, category: str):
+        # Generate pragmatic field actions based on risk/urgency/category
+        actions = []
+
+        # Core actions by severity
+        if risk_level >= 5:
+            actions.extend([
+                "Evacuate and close access immediately",
+                "Install barriers and danger signage",
+                "Call structural engineer for emergency assessment"
+            ])
+        elif risk_level == 4:
+            actions.extend([
+                "Cordon area with barricades and signage",
+                "Limit traffic/load until inspected",
+                "Book structural engineer within 24 hours"
+            ])
+        elif risk_level == 3:
+            actions.extend([
+                "Mark and monitor the area",
+                "Schedule repair within 1-2 weeks",
+                "Capture detailed photos/measurements for contractor"
+            ])
+        else:
+            actions.extend([
+                "Monitor condition during routine rounds",
+                "Log issue with timestamp and location",
+                "Plan maintenance in next cycle"
+            ])
+
+        # Adjust for urgency
+        if urgency == "immediate":
+            actions.insert(0, "Stop usage immediately; notify safety officer")
+        elif urgency == "high":
+            actions.insert(0, "Prioritize work order within 24-48 hours")
+
+        # Category-specific hints
+        cat = (category or "").lower()
+        if "bridge" in cat or "flyover" in cat:
+            actions.append("Divert traffic and request bridge inspection team")
+        if "road" in cat or "pothole" in cat:
+            actions.append("Deploy cones and reflective signage; slow traffic")
+        if "building" in cat or "wall" in cat:
+            actions.append("Restrict access to adjacent rooms/floors")
+        if "electrical" in cat or "cable" in cat:
+            actions.append("Isolate power to the affected circuit if safe")
+        if "water" in cat or "pipeline" in cat or "drain" in cat:
+            actions.append("Shut or throttle flow; place spill containment")
+
+        actions.append("Document actions taken and schedule follow-up inspection")
+        return actions
+
     default_fallback = {
         "risk_level": "Pending",
         "safety_risk": "Pending",
@@ -173,21 +231,25 @@ def assess_risk_with_gemini(image_base64, category, description):
         "damage_extent": "To be determined",
         "severity_justification": "AI analysis currently unavailable due to system limits. A manual review has been scheduled.",
         "identified_risks": ["Area needs physical inspection"],
-        "recommended_actions": ["Maintain safe distance", "Wait for authority confirmation"]
+        "recommended_actions": [
+            "Cordon area if public-facing",
+            "Post caution signage and restrict access",
+            "Escalate to supervisor for manual inspection"
+        ]
     }
 
-    if not gemini_client:
+    if not GEMINI_API_KEY:
         return default_fallback
-    
+
     try:
         # Remove data URI prefix if present
         if "," in image_base64:
             image_base64 = image_base64.split(",")[1]
-        
+
         # Decode and convert to PIL Image
         image_data = base64.b64decode(image_base64)
         image = Image.open(BytesIO(image_data))
-        
+
         # Create assessment prompt with detailed criteria
         prompt = """You are an expert infrastructure safety inspector with 20+ years experience. Analyze this damage image CAREFULLY and provide a DIFFERENTIATED risk assessment based on ACTUAL damage severity.
 
@@ -233,60 +295,76 @@ RESPOND WITH ONLY THIS VALID JSON, NO OTHER TEXT:
   "identified_risks": ["<specific risk 1>", "<specific risk 2>", "<specific risk 3>"],
   "recommended_actions": ["<action 1>", "<action 2>", "<action 3>"]
 }"""
-        
+
         prompt += f"\n\nCategory: {category}\nUser Description: {description}\n\nBe SPECIFIC and DIFFERENTIATED. Do NOT give generic 3/5 scores. Analyze the actual damage."
 
-        response = gemini_client.models.generate_content(
-            model=ACTIVE_GEMINI_MODEL,
-            contents=[prompt, image]
-        )
+        model = genai.GenerativeModel(ACTIVE_GEMINI_MODEL)
+        response = model.generate_content([prompt, image])
         response_text = response.text.strip()
-        
+
         print(f"Raw Gemini response: {response_text[:500]}")
-        
+
         # Extract JSON from response
         if "{" in response_text and "}" in response_text:
             json_start = response_text.find("{")
             json_end = response_text.rfind("}") + 1
             json_str = response_text[json_start:json_end]
-            
             try:
                 assessment = json.loads(json_str)
-                
+
                 # Validate and ensure proper scoring (don't default to 3)
                 if "risk_level" not in assessment or assessment["risk_level"] is None:
-                    assessment["risk_level"] = 2  # Default to lower if missing
+                    assessment["risk_level"] = 2
                 if "safety_risk" not in assessment or assessment["safety_risk"] is None:
                     assessment["safety_risk"] = 2
-                
+
                 # Ensure scores are in valid range
                 assessment["risk_level"] = max(1, min(5, int(assessment.get("risk_level", 2))))
                 assessment["safety_risk"] = max(1, min(5, int(assessment.get("safety_risk", 2))))
-                
+
                 assessment.setdefault("urgency", "medium")
                 assessment.setdefault("damage_type", "Unknown damage")
                 assessment.setdefault("damage_extent", "Unknown")
                 assessment.setdefault("severity_justification", "")
                 assessment.setdefault("identified_risks", [])
                 assessment.setdefault("recommended_actions", [])
-                
+
                 # Ensure identified_risks and recommended_actions are lists
                 if not isinstance(assessment["identified_risks"], list):
                     assessment["identified_risks"] = []
                 if not isinstance(assessment["recommended_actions"], list):
                     assessment["recommended_actions"] = []
-                
+
+                # Fill recommended actions if model returned none
+                if not assessment["recommended_actions"]:
+                    try:
+                        risk_val = int(assessment.get("risk_level", 2))
+                    except Exception:
+                        risk_val = 2
+                    assessment["recommended_actions"] = build_recommended_actions(
+                        risk_val,
+                        assessment.get("urgency", "medium"),
+                        category
+                    )
+
                 print(f"Parsed assessment: {assessment}")
                 return assessment
             except json.JSONDecodeError as e:
                 print(f"JSON parse error: {str(e)}")
                 return default_fallback
         else:
-            print(f"No JSON found in response")
+            print("No JSON found in response")
             return default_fallback
-        
+
     except Exception as e:
-        print(f"Gemini error: {str(e)}")
+        err_msg = str(e)
+        if "RESOURCE_EXHAUSTED" in err_msg or "429" in err_msg:
+            print("Gemini quota hit: falling back to manual review")
+            fallback = default_fallback.copy()
+            fallback["severity_justification"] = "AI temporarily unavailable due to quota. Manual review scheduled."
+            fallback["recommended_actions"] = ["Maintain safe distance", "Resubmit after a few minutes"]
+            return fallback
+        print(f"Gemini error: {err_msg}")
         return default_fallback
 
 @app.route("/submit-report", methods=["POST"])
@@ -302,7 +380,7 @@ def submit_report():
         
         # Assess risk with Gemini if image provided
         risk_assessment = None
-        if image and gemini_client:
+        if image and GEMINI_API_KEY:
             print("Analyzing with Gemini...")
             risk_assessment = assess_risk_with_gemini(image, category, description)
             print(f"Risk assessment: {risk_assessment}")

@@ -119,8 +119,8 @@ function displayRiskAssessment(assessment, imageBase64, reportId) {
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <!-- Image Section -->
         <div style="display: flex; flex-direction: column; align-items: center;">
-          ${imageBase64 ? `<img src="${imageBase64}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid ${color};" alt="Uploaded damage image">` : ''}
-          <p style="font-size: 12px; color: #666; margin-top: 10px;">Uploaded Image</p>
+          ${imageBase64 ? `<img src="${imageBase64}" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid ${color};" alt="Captured damage image">` : ''}
+          <p style="font-size: 12px; color: #666; margin-top: 10px;">Captured Image</p>
         </div>
         
         <!-- Assessment Section -->
@@ -200,9 +200,9 @@ document.getElementById("reportForm").addEventListener("submit", async (e) => {
   if (fileInput.files.length > 0) {
     const file = fileInput.files[0];
     
-    // Check file size (max 5MB for base64)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image too large! Please upload an image smaller than 5MB.");
+    // Check file size (max 15MB for high-res camera captures)
+    if (file.size > 15 * 1024 * 1024) {
+      alert("Image too large! Please capture an image smaller than 15MB.");
       return;
     }
     
@@ -274,6 +274,6 @@ document.getElementById("reportForm").addEventListener("submit", async (e) => {
     };
     reader.readAsDataURL(file);
   } else {
-    alert("Please select an image");
+    alert("Please capture an image using your camera.");
   }
 });
