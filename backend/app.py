@@ -6,7 +6,7 @@ import os
 import base64
 from datetime import datetime, timezone, timedelta
 import uuid
-import google.generativeai as genai
+from google import genai
 from PIL import Image
 from io import BytesIO
 import json
@@ -74,10 +74,11 @@ else:
 # Initialize Gemini API (vision-capable). Allow override via env GEMINI_MODEL.
 # Default to a lighter model to reduce quota usage.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-ACTIVE_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "models/gemini-2.5-flash-lite")
+ACTIVE_GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
+genai_client = None
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    genai_client = genai.Client(api_key=GEMINI_API_KEY)
     print(f"Gemini initialized with model: {ACTIVE_GEMINI_MODEL}")
 else:
     print("WARNING: GEMINI_API_KEY not configured")
@@ -104,7 +105,7 @@ def list_models():
             }), 500
         
         available_models = []
-        for model in genai.list_models():
+        for model in genai_client.models.list():
             available_models.append({
                 "name": model.name,
                 "display_name": getattr(model, "display_name", model.name),
@@ -142,8 +143,10 @@ def test_gemini():
             }), 500
         
         # Test simple text generation
-        model = genai.GenerativeModel(ACTIVE_GEMINI_MODEL)
-        test_response = model.generate_content("Say 'Gemini is working' in exactly those words.")
+        test_response = genai_client.models.generate_content(
+            model=ACTIVE_GEMINI_MODEL,
+            contents="Say 'Gemini is working' in exactly those words."
+        )
         
         if test_response and test_response.text:
             return jsonify({
@@ -298,8 +301,10 @@ RESPOND WITH ONLY THIS VALID JSON, NO OTHER TEXT:
 
         prompt += f"\n\nCategory: {category}\nUser Description: {description}\n\nBe SPECIFIC and DIFFERENTIATED. Do NOT give generic 3/5 scores. Analyze the actual damage."
 
-        model = genai.GenerativeModel(ACTIVE_GEMINI_MODEL)
-        response = model.generate_content([prompt, image])
+        response = genai_client.models.generate_content(
+            model=ACTIVE_GEMINI_MODEL,
+            contents=[prompt, image]
+        )
         response_text = response.text.strip()
 
         print(f"Raw Gemini response: {response_text[:500]}")
