@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issue Heatmap | CivicGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%2300d4d4' d='M256 0c4.6 0 9.2 1 13.4 2.9L457.8 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0-172.4-82.5-213.1-264-213.6-363.2-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.9 1 251.4 0 256 0zm0 66.8l0 378.1c138-66.8 175.1-214.8 176-303.4l-176-74.6 0 0z'/%3E%3C/svg%3E">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f172a;
+      color: white;
+      min-height: 100vh;
+    }
+    
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 1000;
+    }
+    
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    
+    .nav-brand i { color: #00d4d4; }
+    
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .nav-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .nav-btn.primary {
+      background: linear-gradient(135deg, #00d4d4, #0891b2);
+      border: none;
+    }
+    
+    /* Main Container */
+    .main-container {
+      display: flex;
+      height: 100vh;
+      padding-top: 60px;
+    }
+    
+    /* Sidebar Filters */
+    .sidebar {
+      width: 320px;
+      background: #1e293b;
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+    
+    .filter-section {
+      margin-bottom: 25px;
+    }
+    
+    .filter-group {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    
+    .filter-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      cursor: pointer;
+    }
+    
+    .filter-checkbox input {
+      width: 18px;
+      height: 18px;
+      accent-color: #00d4d4;
+    }
+    
+    .filter-checkbox label {
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #00d4d4;
+    }
+    
+    .stat-label {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    
+    .stat-card.critical .stat-value { color: #ef4444; }
+    .stat-card.resolved .stat-value { color: #10b981; }
+    
+    /* Legend */
+    .legend {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 15px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 0.85rem;
+    }
+    
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+    }
+    
+    /* Map Container */
+    .map-container {
+      flex: 1;
+      position: relative;
+    }
+    
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* View Toggle */
+    .view-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 500;
+      display: flex;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .view-btn {
+      padding: 10px 20px;
+      border: none;
+      background: white;
+      color: #334155;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .view-btn.active {
+      background: #0f172a;
+      color: white;
+    }
+    
+    /* Info Panel (Admin Only) */
+    .info-panel {
+      display: none;
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      right: 20px;
+      max-width: 400px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      z-index: 500;
+      overflow: hidden;
+    }
+    
+    .info-panel.show { display: block; }
+    
+    .info-header {
+      background: #0f172a;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .info-header h4 { font-size: 1rem; }
+    
+    .info-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    
+    .info-body {
+      padding: 20px;
+      color: #334155;
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .info-row:last-child { border: none; }
+    
+    .info-label { color: #64748b; font-size: 0.85rem; }
+    .info-value { font-weight: 600; }
+    
+    .risk-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: white;
+    }
+    
+    .risk-1, .risk-2 { background: #10b981; }
+    .risk-3 { background: #f59e0b; }
+    .risk-4, .risk-5 { background: #ef4444; }
+    
+    .status-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.3s;
+    }
+    
+    .status-btn.resolve {
+      background: #10b981;
+      color: white;
+    }
+    
+    .status-btn.reopen {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    /* Admin indicator */
+    .admin-badge {
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: none;
+    }
+    
+    .admin-badge.show { display: inline-block; }
+    
+    /* Admin-only elements */
+    .admin-only { display: none; }
+    .admin-only.show { display: block; }
+    
+    /* Loading Overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 600;
+    }
+    
+    .loading-overlay.hidden { display: none; }
+    
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: #00d4d4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+        position: fixed;
+        left: 0;
+        top: 60px;
+        bottom: 0;
+        z-index: 900;
+        width: 280px;
+      }
+      
+      .sidebar.open { display: block; }
+      
+      .mobile-filter-btn {
+        display: block !important;
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 500;
+        background: white;
+        border: none;
+        padding: 12px 16px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        cursor: pointer;
+      }
+      
+      .view-toggle {
+        top: auto;
+        bottom: 80px;
+        right: 10px;
+        left: 10px;
+        max-width: 200px;
+        margin: 0 auto;
+      }
+      
+      .info-panel {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+      }
+    }
+    
+    .mobile-filter-btn { display: none; }
+    
+    /* Custom Popup Styles */
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      padding: 0;
+    }
+    
+    .leaflet-popup-content {
+      margin: 0;
+      min-width: 200px;
+    }
+    
+    .popup-content {
+      padding: 15px;
+    }
+    
+    .popup-category {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    
+    .popup-risk {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 8px;
+    }
+    
+    .popup-detail {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-top: 5px;
+    }
+    
+    .popup-detail i {
+      width: 16px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">
+      <i class="fa-solid fa-shield-halved"></i>
+      CivicGuard
+    </a>
+    <div class="nav-links">
+      <span class="admin-badge" id="adminBadge">ADMIN VIEW</span>
+      <a href="index.html" class="nav-btn"><i class="fa-solid fa-home"></i> Home</a>
+      <a href="app.html" class="nav-btn primary"><i class="fa-solid fa-plus"></i> Report Issue</a>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Sidebar Filters -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Stats -->
+      <div class="filter-section">
+        <h3><i class="fa-solid fa-chart-simple"></i> Overview</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="totalIssues">0</div>
+            <div class="stat-label">Total Issues</div>
+          </div>
+          <div class="stat-card critical">
+            <div class="stat-value" id="criticalIssues">0</div>
+            <div class="stat-label">Critical</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="pendingIssues">0</div>
+            <div class="stat-label">Pending</div>
+          </div>
+          <div class="stat-card resolved">
+            <div class="stat-value" id="resolvedIssues">0</div>
+            <div class="stat-label">Resolved</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Filter -->
+      <div class="filter-section">
+        <h3><i class="fa-solid fa-filter"></i> Filter by Category</h3>
+        <div class="filter-group">
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterAll" checked onchange="toggleAllFilters(this)">
+            <label for="filterAll">All Categories</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterRoad" checked onchange="applyFilters()">
+            <label for="filterRoad">🛣️ Road Damage</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterLight" checked onchange="applyFilters()">
+            <label for="filterLight">💡 Streetlight</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterManhole" checked onchange="applyFilters()">
+            <label for="filterManhole">🕳️ Open Manhole</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterWater" checked onchange="applyFilters()">
+            <label for="filterWater">💧 Water Leakage</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterGarbage" checked onchange="applyFilters()">
+            <label for="filterGarbage">🗑️ Garbage Dump</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Filter (Admin Only) -->
+      <div class="filter-section admin-only" id="riskFilterSection">
+        <h3><i class="fa-solid fa-triangle-exclamation"></i> Filter by Risk</h3>
+        <div class="filter-group">
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterRisk5" checked onchange="applyFilters()">
+            <label for="filterRisk5">🔴 Critical (5)</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterRisk4" checked onchange="applyFilters()">
+            <label for="filterRisk4">🟠 High (4)</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterRisk3" checked onchange="applyFilters()">
+            <label for="filterRisk3">🟡 Medium (3)</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterRisk12" checked onchange="applyFilters()">
+            <label for="filterRisk12">🟢 Low (1-2)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Filter (Admin Only) -->
+      <div class="filter-section admin-only" id="statusFilterSection">
+        <h3><i class="fa-solid fa-clock"></i> Filter by Status</h3>
+        <div class="filter-group">
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterReported" checked onchange="applyFilters()">
+            <label for="filterReported">📋 Reported</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterInProgress" checked onchange="applyFilters()">
+            <label for="filterInProgress">🔧 In Progress</label>
+          </div>
+          <div class="filter-checkbox">
+            <input type="checkbox" id="filterResolved" checked onchange="applyFilters()">
+            <label for="filterResolved">✅ Resolved</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="filter-section">
+        <h3><i class="fa-solid fa-palette"></i> Heatmap Legend</h3>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #22c55e, #84cc16);"></div>
+            <span>Low Issue Density</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #eab308, #f97316);"></div>
+            <span>Medium Density</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #ef4444, #dc2626);"></div>
+            <span>High Density / Critical</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map Container -->
+    <div class="map-container">
+      <!-- Mobile Filter Button -->
+      <button class="mobile-filter-btn" onclick="toggleSidebar()">
+        <i class="fa-solid fa-filter"></i> Filters
+      </button>
+
+      <!-- View Toggle -->
+      <div class="view-toggle">
+        <button class="view-btn active" onclick="setView('heatmap', this)">
+          <i class="fa-solid fa-fire"></i> Heatmap
+        </button>
+        <button class="view-btn" onclick="setView('markers', this)">
+          <i class="fa-solid fa-location-dot"></i> Markers
+        </button>
+      </div>
+
+      <!-- Map -->
+      <div id="map"></div>
+
+      <!-- Loading Overlay -->
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p style="margin-top: 15px; color: #94a3b8;">Loading issue data...</p>
+      </div>
+
+      <!-- Info Panel (for selected issue) -->
+      <div class="info-panel" id="infoPanel">
+        <div class="info-header">
+          <h4 id="infoCategoryTitle">Issue Details</h4>
+          <button class="info-close" onclick="closeInfoPanel()">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="info-body">
+          <div class="info-row">
+            <span class="info-label">Risk Level</span>
+            <span class="risk-badge risk-3" id="infoRisk">3/5</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value" id="infoStatus">Reported</span>
+          </div>
+          <div class="info-row admin-only">
+            <span class="info-label">Reported</span>
+            <span class="info-value" id="infoDate">-</span>
+          </div>
+          <div class="info-row admin-only">
+            <span class="info-label">Description</span>
+            <span class="info-value" id="infoDesc" style="max-width: 200px; text-align: right;">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Location</span>
+            <span class="info-value" id="infoLocation">-</span>
+          </div>
+          <button class="status-btn resolve admin-only" id="infoActionBtn" onclick="updateIssueStatus()">
+            Mark Resolved
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  
+  <script>
+    // Global state
+    let map;
+    let heatLayer;
+    let markersLayer;
+    let allReports = [];
+    let filteredReports = [];
+    let currentView = 'heatmap';
+    let isAdmin = false;
+    let selectedReport = null;
+    // Inter-tab notifier
+    let reportsChannel = null;
+    try { reportsChannel = new BroadcastChannel('reports'); } catch(e) { reportsChannel = null; }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Check user role
+      await checkUserRole();
+      
+      // Initialize map
+      initMap();
+      
+      // Load reports
+      await loadReports();
+    });
+
+    // Check if user is admin
+    async function checkUserRole() {
+      const token = localStorage.getItem('userToken');
+      const storedRole = localStorage.getItem('userRole');
+      
+      if (token && storedRole === 'admin') {
+        try {
+          const response = await fetch('/auth/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          });
+          
+          const data = await response.json();
+          
+          if (data.status === 'success' && data.valid && data.user.role === 'admin') {
+            isAdmin = true;
+          }
+        } catch (err) {
+          console.error('Auth check failed:', err);
+        }
+      }
+      
+      // Update UI based on role
+      if (isAdmin) {
+        document.getElementById('adminBadge').classList.add('show');
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.add('show'));
+      }
+    }
+
+    // Initialize Leaflet map with Mappls/OSM tiles
+    function initMap() {
+      // Center on India (default)
+      map = L.map('map', {
+        center: [20.5937, 78.9629],
+        zoom: 5,
+        zoomControl: true
+      });
+
+      // Use Mappls tiles (MapmyIndia)
+      // Note: Mappls requires their SDK for full features, using OSM as base with option for Mappls
+      const mapplsKey = 'rjiiobtblhskuohkzltmzuzrcvonkuizrulv';
+      
+      // Try Mappls tiles, fallback to OSM
+      const mapplsTiles = L.tileLayer(`https://apis.mappls.com/advancedmaps/v1/${mapplsKey}/still_image?center={y},{x}&zoom={z}&size=256x256`, {
+        attribution: '© <a href="https://www.mappls.com/">Mappls</a>',
+        maxZoom: 19
+      });
+      
+      // OpenStreetMap fallback (more reliable)
+      const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+      });
+      
+      // Use OpenStreetMap as the active base layer (Mappls defined as alternative)
+      osmTiles.addTo(map);
+
+      // Initialize layers
+      heatLayer = L.heatLayer([], {
+        radius: 25,
+        blur: 15,
+        maxZoom: 17,
+        max: 5,
+        gradient: {
+          0.2: '#22c55e',
+          0.4: '#84cc16',
+          0.6: '#eab308',
+          0.8: '#f97316',
+          1.0: '#ef4444'
+        }
+      }).addTo(map);
+
+      markersLayer = L.layerGroup();
+    }
+
+    // Load reports from backend
+    async function loadReports() {
+      try {
+        const response = await fetch('/get-reports');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+          allReports = data.reports.filter(r => r.location && r.location.includes(','));
+          filteredReports = [...allReports];
+          
+          updateStats();
+          updateMapData();
+          
+          // Auto-fit to data bounds if we have reports
+          if (allReports.length > 0) {
+            fitMapToBounds();
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load reports:', err);
+      } finally {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+      }
+    }
+
+    // Update statistics
+    function updateStats() {
+      document.getElementById('totalIssues').textContent = filteredReports.length;
+      document.getElementById('criticalIssues').textContent = filteredReports.filter(r => 
+        (r.risk_assessment?.risk_level || 0) >= 4
+      ).length;
+      document.getElementById('pendingIssues').textContent = filteredReports.filter(r => 
+        (r.status || '').toLowerCase() !== 'resolved'
+      ).length;
+      document.getElementById('resolvedIssues').textContent = filteredReports.filter(r => 
+        (r.status || '').toLowerCase() === 'resolved'
+      ).length;
+    }
+
+    // Update map with filtered data
+    function updateMapData() {
+      // Clear existing
+      // Close any open popups first to avoid Leaflet trying to animate/operate
+      // on marker DOM that's about to be removed (prevents '_animating' errors).
+      try { if (map && map.closePopup) map.closePopup(); } catch(e) { console.error('closePopup failed', e); }
+
+      heatLayer.setLatLngs([]);
+      markersLayer.clearLayers();
+
+      const heatData = [];
+      
+      filteredReports.forEach(report => {
+        const coords = parseLocation(report.location);
+        if (!coords) return;
+
+        const risk = report.risk_assessment?.risk_level || 1;
+        
+        // Add to heatmap (weighted by risk)
+        heatData.push([coords.lat, coords.lng, risk / 5]);
+
+        // Create marker
+        const marker = createMarker(report, coords);
+        markersLayer.addLayer(marker);
+      });
+
+      // Update heatmap
+      heatLayer.setLatLngs(heatData);
+
+      // Show appropriate layer
+      if (currentView === 'heatmap') {
+        map.addLayer(heatLayer);
+        map.removeLayer(markersLayer);
+      } else {
+        map.removeLayer(heatLayer);
+        map.addLayer(markersLayer);
+      }
+    }
+
+    // Parse location string to coordinates
+    function parseLocation(locationStr) {
+      if (!locationStr) return null;
+      
+      const parts = locationStr.split(',').map(p => parseFloat(p.trim()));
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return { lat: parts[0], lng: parts[1] };
+      }
+      return null;
+    }
+
+    // Create marker with popup
+    function createMarker(report, coords) {
+      const risk = report.risk_assessment?.risk_level || 1;
+      const colors = {
+        1: '#22c55e', 2: '#84cc16', 3: '#eab308', 4: '#f97316', 5: '#ef4444'
+      };
+      
+      const markerIcon = L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="
+          background: ${colors[risk] || '#6b7280'};
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+        ">${risk}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+
+      const marker = L.marker([coords.lat, coords.lng], { icon: markerIcon });
+      
+      // Popup content (varies by role)
+      let popupContent = `
+        <div class="popup-content">
+          <div class="popup-category">${report.category || 'Issue'}</div>
+          <div class="popup-risk" style="background: ${colors[risk]}">Risk: ${risk}/5</div>
+          <div class="popup-detail">
+            <i class="fa-solid fa-clock"></i> ${report.status || 'Reported'}
+          </div>
+      `;
+      
+      if (isAdmin) {
+        popupContent += `
+          <div class="popup-detail">
+            <i class="fa-solid fa-calendar"></i> ${new Date(report.timestamp).toLocaleDateString()}
+          </div>
+          <div class="popup-detail" style="margin-top: 8px;">
+            ${report.description ? report.description.substring(0, 100) + '...' : 'No description'}
+          </div>
+        `;
+      }
+      
+      popupContent += `</div>`;
+      
+      marker.bindPopup(popupContent);
+      
+      // Click handler for admin info panel
+      if (isAdmin) {
+        marker.on('click', () => showInfoPanel(report));
+      }
+      
+      return marker;
+    }
+
+    // Fit map to data bounds
+    function fitMapToBounds() {
+      const validCoords = allReports
+        .map(r => parseLocation(r.location))
+        .filter(c => c !== null);
+      
+      if (validCoords.length > 0) {
+        const bounds = L.latLngBounds(validCoords.map(c => [c.lat, c.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }
+
+    // Toggle view (heatmap/markers)
+    function setView(view, btn) {
+      currentView = view;
+      
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Close popups before switching layers to avoid Leaflet animation errors
+      try { if (map && map.closePopup) map.closePopup(); } catch(e) { console.error('closePopup failed', e); }
+
+      if (view === 'heatmap') {
+        map.addLayer(heatLayer);
+        map.removeLayer(markersLayer);
+      } else {
+        map.removeLayer(heatLayer);
+        map.addLayer(markersLayer);
+      }
+    }
+
+    // Filter functions
+    function toggleAllFilters(checkbox) {
+      const checkboxes = document.querySelectorAll('.filter-checkbox input:not(#filterAll)');
+      checkboxes.forEach(cb => cb.checked = checkbox.checked);
+      applyFilters();
+    }
+
+    function applyFilters() {
+      filteredReports = allReports.filter(report => {
+        // Category filter
+        const category = (report.category || '').toLowerCase();
+        if (category.includes('road') || category.includes('pothole')) {
+          if (!document.getElementById('filterRoad').checked) return false;
+        } else if (category.includes('streetlight') || category.includes('light')) {
+          if (!document.getElementById('filterLight').checked) return false;
+        } else if (category.includes('manhole')) {
+          if (!document.getElementById('filterManhole').checked) return false;
+        } else if (category.includes('water') || category.includes('leakage')) {
+          if (!document.getElementById('filterWater').checked) return false;
+        } else if (category.includes('garbage')) {
+          if (!document.getElementById('filterGarbage').checked) return false;
+        }
+
+        // Risk filter (admin only)
+        if (isAdmin) {
+          const risk = report.risk_assessment?.risk_level || 1;
+          if (risk === 5 && !document.getElementById('filterRisk5').checked) return false;
+          if (risk === 4 && !document.getElementById('filterRisk4').checked) return false;
+          if (risk === 3 && !document.getElementById('filterRisk3').checked) return false;
+          if (risk <= 2 && !document.getElementById('filterRisk12').checked) return false;
+
+          // Status filter
+          const status = report.status || 'Reported';
+          if (status === 'Reported' && !document.getElementById('filterReported').checked) return false;
+          if (status === 'In Progress' && !document.getElementById('filterInProgress').checked) return false;
+          if (status === 'Resolved' && !document.getElementById('filterResolved').checked) return false;
+        }
+
+        return true;
+      });
+
+      updateStats();
+      updateMapData();
+    }
+
+    // Show info panel (admin)
+    function showInfoPanel(report) {
+      selectedReport = report;
+      const risk = report.risk_assessment?.risk_level || 0;
+      
+      document.getElementById('infoCategoryTitle').textContent = report.category || 'Issue';
+      
+      const riskBadge = document.getElementById('infoRisk');
+      riskBadge.textContent = `${risk}/5`;
+      riskBadge.className = `risk-badge risk-${risk}`;
+      
+      document.getElementById('infoStatus').textContent = report.status || 'Reported';
+      document.getElementById('infoDate').textContent = new Date(report.timestamp).toLocaleString();
+      document.getElementById('infoDesc').textContent = report.description || 'No description';
+      document.getElementById('infoLocation').textContent = report.location || '-';
+      
+      const actionBtn = document.getElementById('infoActionBtn');
+      if ((report.status || '').toLowerCase() === 'resolved') {
+        actionBtn.textContent = 'Re-open Case';
+        actionBtn.className = 'status-btn reopen admin-only show';
+      } else {
+        actionBtn.textContent = 'Mark Resolved';
+        actionBtn.className = 'status-btn resolve admin-only show';
+      }
+      
+      document.getElementById('infoPanel').classList.add('show');
+    }
+
+    function closeInfoPanel() {
+      document.getElementById('infoPanel').classList.remove('show');
+      selectedReport = null;
+    }
+
+    // Update issue status
+    async function updateIssueStatus() {
+      if (!selectedReport) return;
+      const actionBtn = document.getElementById('infoActionBtn');
+      if (actionBtn) actionBtn.disabled = true;
+
+      const originalStatus = (selectedReport.status || 'Reported').toLowerCase();
+      const newStatus = originalStatus === 'resolved' ? 'In Progress' : 'Resolved';
+
+      // No-op guard
+      if (originalStatus === newStatus) {
+        if (actionBtn) actionBtn.disabled = false;
+        return;
+      }
+
+      try {
+        const response = await fetch('/update-report-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            report_id: selectedReport.id, 
+            status: newStatus 
+          })
+        });
+
+        // Parse backend JSON and ensure it reports success
+        let respJson = null;
+        try { respJson = await response.json(); } catch (e) { /* ignore */ }
+
+        if (response.ok && respJson && respJson.status === 'success') {
+          // Update local state only when backend confirms
+          selectedReport.status = newStatus;
+          const idx = allReports.findIndex(r => r.id === selectedReport.id);
+          if (idx >= 0) allReports[idx].status = newStatus;
+
+          showInfoPanel(selectedReport);
+          applyFilters();
+
+          // notify other tabs/pages about the status change
+          try {
+            if (reportsChannel) reportsChannel.postMessage({ type: 'status_update', id: selectedReport.id, status: newStatus });
+            else localStorage.setItem('reports_update', JSON.stringify({ id: selectedReport.id, status: newStatus, t: Date.now() }));
+          } catch(e) { console.error('notify failed', e); }
+        } else {
+          // Backend reported error or non-JSON response
+          const errMsg = (respJson && respJson.message) ? respJson.message : (response.statusText || 'Unknown error');
+          console.error('Update failed:', response.status, errMsg, respJson);
+          alert('Failed to update status: ' + errMsg);
+
+          // Refresh reports to keep UI in sync with server — do not throw if loadReports fails
+          try {
+            // Close any map popups before reloading (prevents Leaflet animation errors)
+            try { if (map && map.closePopup) map.closePopup(); } catch(e) { console.error('closePopup failed', e); }
+
+            await loadReports();
+            const refreshed = allReports.find(r => r.id === selectedReport.id);
+            if (refreshed) showInfoPanel(refreshed);
+          } catch (reloadErr) {
+            console.error('Failed to reload reports after failed update:', reloadErr);
+          }
+        }
+      } catch (err) {
+        console.error('Update request error:', err);
+        alert('Failed to update status: ' + (err.message || err));
+        try {
+          await loadReports();
+          const refreshed = allReports.find(r => r.id === selectedReport.id);
+          if (refreshed) showInfoPanel(refreshed);
+        } catch (reloadErr) {
+          console.error('Failed to reload reports after request error:', reloadErr);
+        }
+      } finally {
+        if (actionBtn) actionBtn.disabled = false;
+      }
+    }
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+    }
+  </script>
+</body>
+</html>
