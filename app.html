@@ -14,7 +14,9 @@
     <a href="index.html" class="nav-logo" style="font-size: 1rem;">
       <i class="fa-solid fa-chevron-left" style="color:var(--accent-cyan);"></i> &nbsp; Back to Home
     </a>
-    <div style="display: flex; align-items: center; gap: 15px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="my-reports.html" id="myReportsLink" class="nav-btn btn-primary" style="display:none;">My Reports</a>
+      <a href="heatmap.html" id="heatmapLink" class="nav-btn btn-ghost" style="display:none;">Heatmap</a>
       <span id="userGreeting" style="font-weight: 500; color: var(--text-light); font-size: 0.9rem;"></span>
       <button id="logoutBtn" onclick="logout()" style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500;">
         <i class="fa-solid fa-right-from-bracket"></i> Logout
@@ -71,9 +73,13 @@
       const userName = localStorage.getItem('userName');
       
       if (token && userName) {
-        document.getElementById('userGreeting').textContent = `Hi, ${userName}`;
-        document.getElementById('logoutBtn').style.display = 'inline-flex';
-      }
+          document.getElementById('userGreeting').textContent = `Hi, ${userName}`;
+          document.getElementById('logoutBtn').style.display = 'inline-flex';
+          const myReports = document.getElementById('myReportsLink');
+          const heatmap = document.getElementById('heatmapLink');
+          if (myReports) myReports.style.display = 'inline-flex';
+          if (heatmap) heatmap.style.display = 'inline-flex';
+        }
     }
     
     async function logout() {

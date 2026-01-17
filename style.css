@@ -847,3 +847,36 @@ footer a { color: var(--accent-cyan); text-decoration: none; }
     padding-bottom: max(30px, env(safe-area-inset-bottom));
   }
 }
+
+/* Small targeted anchor/button polish for navbar buttons */
+.nav-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+}
+.nav-btn::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -6px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-cyan-dark));
+  border-radius: 6px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms cubic-bezier(.2,.9,.25,1);
+  pointer-events: none;
+}
+.nav-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(13,40,62,0.08); }
+.nav-btn:hover::after { transform: scaleX(1); }
+.nav-btn:focus { outline: none; box-shadow: 0 0 0 4px rgba(100,255,218,0.08); }
+
+/* Primary and ghost variants */
+.nav-btn.btn-primary { background: linear-gradient(90deg, var(--accent-cyan), var(--accent-cyan-dark)); color: #052023; border: none; }
+.nav-btn.btn-ghost { background: transparent; color: var(--text-grey); border: 1px solid rgba(0,0,0,0.06); }

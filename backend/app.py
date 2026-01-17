@@ -359,6 +359,25 @@ def update_report_status():
 @app.route("/submit-report", methods=["POST"])
 def submit_report():
     try:
+        # Server-side authentication: expect Bearer token in Authorization header
+        auth_header = request.headers.get('Authorization', '')
+        token = None
+        if auth_header and auth_header.lower().startswith('bearer '):
+            token = auth_header.split(' ', 1)[1].strip()
+        else:
+            # fallback: token may be sent in JSON body
+            try:
+                data_temp = request.get_json(silent=True) or {}
+                token = data_temp.get('token')
+            except Exception:
+                token = None
+
+        if not token or token not in active_tokens:
+            return jsonify({"status": "error", "message": "Authentication required"}), 401
+
+        # Attach user info for audit
+        user_info = active_tokens.get(token, {})
+
         data = request.json
         print(f"Received report submission")
 
@@ -398,6 +417,10 @@ def submit_report():
             "image": image_url, 
             "risk_assessment": risk_assessment,
             "status": "Reported", # Default status
+            "reported_by": {
+                "email": user_info.get('email'),
+                "name": user_info.get('name')
+            },
             "timestamp": datetime.now(IST).isoformat()
         }
 

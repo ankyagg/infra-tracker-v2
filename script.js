@@ -2,6 +2,31 @@
 if (!document.getElementById("reportForm")) {
   console.log("On Landing Page - Script standby.");
 } else {
+  // Block unauthenticated access to the report page immediately
+  const initialToken = localStorage.getItem('userToken');
+  if (!initialToken) {
+    // Send user to login/signup before they can see the report form
+    window.location.href = 'login.html';
+  } else {
+    // Verify token in background and redirect if invalid
+    (async () => {
+      try {
+        const rv = await fetch('/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: initialToken })
+        });
+        const rj = await rv.json();
+        if (rj.status !== 'success' || !rj.valid) {
+          localStorage.removeItem('userToken');
+          window.location.href = 'login.html';
+        }
+      } catch (err) {
+        console.error('Auth verify failed:', err);
+        // If verification fails due to network, keep user on page for now
+      }
+    })();
+  }
   
   // 1. File Upload UI Interaction (Camera Capture)
   document.getElementById("fileInput").addEventListener("change", function(e) {
@@ -201,6 +226,13 @@ if (!document.getElementById("reportForm")) {
   // 5. Form Submission Logic
   document.getElementById("reportForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+    // Redirect unauthenticated users to signup/login
+    const token = localStorage.getItem('userToken');
+    if (!token) {
+      // Preserve intent: send user to signup tab
+      window.location.href = 'login.html#signup';
+      return;
+    }
     
     const btn = document.querySelector(".analyze-btn");
     const originalBtnText = btn.innerHTML;
@@ -227,9 +259,14 @@ if (!document.getElementById("reportForm")) {
         };
 
         // CORRECTED: Use relative path (automatically uses current domain/port)
+        // Include Authorization header if token present
+        const clientToken = localStorage.getItem('userToken');
+        const headers = { "Content-Type": "application/json" };
+        if (clientToken) headers['Authorization'] = `Bearer ${clientToken}`;
+
         const response = await fetch("/submit-report", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
+          headers,
           body: JSON.stringify(payload)
         });
 

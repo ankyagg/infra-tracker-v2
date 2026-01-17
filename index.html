@@ -16,6 +16,9 @@
     </a>
     <div class="nav-links">
       <a href="#features" class="hide-mobile">Features</a>
+      <a href="app.html" id="newReportBtn" class="nav-btn btn-outline hide-mobile" style="display:none;">+ New Report</a>
+      <a href="my-reports.html" id="myReportsLink" class="nav-btn btn-primary hide-mobile" style="display:none;">My Reports</a>
+      <a href="heatmap.html" id="heatmapLink" class="nav-btn btn-ghost hide-mobile" style="display:none;">Heatmap</a>
       <a href="login.html" id="loginBtn" style="background: rgba(100, 255, 218, 0.1); padding: 8px 16px; border-radius: 6px; border: 1px solid var(--accent-cyan);">
         <i class="fa-solid fa-right-to-bracket"></i> <span class="btn-text">Login</span>
       </a>
@@ -70,13 +73,19 @@
       const token = localStorage.getItem('userToken');
       const loginBtn = document.getElementById('loginBtn');
       const logoutBtn = document.getElementById('logoutBtn');
+      const myReports = document.getElementById('myReportsLink');
+      const heatmap = document.getElementById('heatmapLink');
       
       if (token) {
         loginBtn.style.display = 'none';
         logoutBtn.style.display = 'inline-flex';
+        if (myReports) myReports.style.display = 'inline-flex';
+        if (heatmap) heatmap.style.display = 'inline-flex';
       } else {
         loginBtn.style.display = 'inline-flex';
         logoutBtn.style.display = 'none';
+        if (myReports) myReports.style.display = 'none';
+        if (heatmap) heatmap.style.display = 'none';
       }
     }
     

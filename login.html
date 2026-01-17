@@ -425,6 +425,10 @@
     // Check if already logged in
     const storedToken = localStorage.getItem('userToken');
     const storedRole = localStorage.getItem('userRole');
+    // If linked with #signup, open the Sign Up tab
+    if (location.hash === '#signup') {
+      switchTab('signup');
+    }
     if (storedToken) {
       if (storedRole === 'admin') {
         window.location.href = 'admin.html';
